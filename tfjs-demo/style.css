@@ -1,0 +1,77 @@
+:root {
+  --axis-color: #555;
+  --svg-background: #f3f3f3;
+}
+
+body{
+  margin: 10px;
+}
+
+.fas {
+  font-size: 40px;
+}
+
+
+svg {
+  border-radius: 10px;
+  background-color: var(--svg-background);
+}
+
+
+svg text{
+  fill: var(--axis-color);
+}
+
+
+svg text, .fas{
+  -webkit-user-select: none;
+     -moz-user-select: none;
+      -ms-user-select: none;
+          user-select: none;
+}
+
+
+svg line, svg path.domain{
+  stroke: var(--axis-color);
+}
+
+
+.tick line{
+  stroke: #aaa;
+  stroke-width: 0.6;
+  stroke-dasharray: 4 1;
+}
+
+
+/*https://www.w3schools.com/howto/howto_js_rangeslider.asp*/
+.slider {
+  -webkit-appearance: none;
+  /*width: 100%;*/
+  height: 5px;
+  border-radius: 5px;  
+  background: #d3d3d3;
+  outline: none;
+  opacity: 0.7;
+  -webkit-transition: .2s;
+  transition: opacity .2s;
+}
+
+
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%; 
+  background: #4CAF50;
+  cursor: pointer;
+}
+
+
+.slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #4CAF50;
+  cursor: pointer;
+}
