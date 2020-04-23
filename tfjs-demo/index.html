@@ -10,7 +10,13 @@
   <!-- <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@0.11.6"> </script> -->
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.0.0/dist/tf.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.9.1/underscore-min.js"></script>
-
+  <script>
+  d3.selection.prototype.moveToFront = function() {
+    return this.each(function(){
+    this.parentNode.appendChild(this);
+    });
+  };
+  </script>
 </head>
 
 <body>
@@ -95,11 +101,6 @@ function stress_loss(pred, target, weight){
 //   });
 // }
 
-let p1 = {x: 0, y:0};
-let p2 = {x: 1, y:1};
-let p3 = {x:1, y:0};
-let p4 = {x:0, y:1};
-let nodes = [p1,p2,p3,p4];
 
 function sign(p, line){
   let s = (p.x-line[0].x)*(line[1].y-line[0].y) + (p.y-line[0].y)*(line[0].x-line[1].x);
@@ -415,8 +416,8 @@ function drawGraph(svg, graph){
     .style('alignment-baseline', 'middle');
 
     let nodes = svg.selectAll('.node')
-    .attr('transform', d=>`translate(${svg.sx(d.x)},${svg.sy(d.y)})`);
-
+    .attr('transform', d=>`translate(${svg.sx(d.x)},${svg.sy(d.y)})`)
+    .moveToFront();
     let texts = nodes.selectAll('text')
     .text(d=>d.id);
     let circles = nodes.selectAll('.circles');
