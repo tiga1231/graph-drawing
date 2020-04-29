@@ -28,15 +28,24 @@
 
 <div class='form-group'>
   <label for='graphType'>Graph Type:</label>
-  <select id="graphType" class="form-control" style='width: 150px;'>
+  <select id="graphType" class="form-control" style='width: 250px;'>
     <!-- <option value="simple-4">simple-4</option> -->
-    <option value="k-5">k-5</option>
+<!--     <option value="k-5">k-5</option>
     <option value="cycle-10">cycle-10</option>
     <option value="tree-2-3" >tree-2-3</option>
     <option value="tree-2-4">tree-2-4</option>
     <option value="tree-2-5">tree-2-5</option>
     <option value="cube">cube</option>
-    <option value="dodecahedron" selected>dodecahedron</option>
+    <option value="dodecahedron" selected>dodecahedron</option> -->
+    <option value="input_9">input_9</option>
+    <option value="block_graph_5_5" selected>block_graph_5_5</option>
+    <option value="hypercube_graph_3">hypercube_graph_3</option>
+    <option value="dodecahedral_graph">dodecahedral_graph</option>
+    <option value="complete_bipartite_graph_5_5">complete_bipartite_graph_5_5</option>
+    <option value="complete_graph_20">complete_graph_20</option>
+    <option value="full_rary_tree">full_rary_tree</option>
+    <option value="grid_graph_5_5">grid_graph_5_5</option>
+    <option value="cycle_graph_10">cycle_graph_10</option>
   </select>
 </div>
 
@@ -501,6 +510,7 @@ window.onload = function(){
 
   function loadGraph(fn){
     d3.json(fn).then((graph)=>{
+      window.graph = graph;
       let x;
       function reset(){
         x = tf.variable(tf.randomUniform([graph.nodes.length,2]));
