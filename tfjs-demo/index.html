@@ -1,14 +1,32 @@
 <html>
 <head>
 
-  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
-  
-  <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.2.0/css/all.css" integrity="sha384-hWVjflwFxL6sNzntih27bfxkr27PmbbK/iSvJ+a4+0owXq79v+lsFkW54bOGbiDQ" crossorigin="anonymous">
-  <link rel="stylesheet" href="./style.css">
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.8.2/css/all.css">
+  <!-- Google Fonts -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap">
+  <!-- Bootstrap core CSS -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.4.1/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Material Design Bootstrap -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/mdbootstrap/4.16.0/css/mdb.min.css" rel="stylesheet">
+  <!-- JQuery -->
+  <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+  <!-- Bootstrap tooltips -->
+  <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.4/umd/popper.min.js"></script>
+  <!-- Bootstrap core JavaScript -->
+  <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.4.1/js/bootstrap.min.js"></script>
+  <!-- MDB core JavaScript -->
+  <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mdbootstrap/4.16.0/js/mdb.min.js"></script>
 
+
+  <!-- <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous"> -->
+  <!-- <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.2.0/css/all.css" integrity="sha384-hWVjflwFxL6sNzntih27bfxkr27PmbbK/iSvJ+a4+0owXq79v+lsFkW54bOGbiDQ" crossorigin="anonymous"> -->
+  
+  <link rel="stylesheet" href="./style.css">
   <script src="https://d3js.org/d3.v5.min.js"></script>
-  <!-- <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@0.11.6"> </script> -->
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.0.0/dist/tf.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/numeric/1.2.6/numeric.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/6.6.4/math.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.7.2/dist/tf.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.9.1/underscore-min.js"></script>
   <script>
   d3.selection.prototype.moveToFront = function() {
@@ -20,54 +38,68 @@
 </head>
 
 <body>
-<svg id='loss' width=100 height=100></svg>
-<svg id='graph' width=100 height=100></svg>
-<i id='play' class="fas fa-pause-circle"></i>
-<!-- <i class="fas fa-pause-circle"></i> -->
-<i id='reset' class="fas fa-random"></i>
 
-<div class='form-group'>
-  <label for='graphType'>Graph Type:</label>
-  <select id="graphType" class="form-control" style='width: 250px;'>
-    <!-- <option value="simple-4">simple-4</option> -->
-<!--     <option value="k-5">k-5</option>
-    <option value="cycle-10">cycle-10</option>
-    <option value="tree-2-3" >tree-2-3</option>
-    <option value="tree-2-4">tree-2-4</option>
-    <option value="tree-2-5">tree-2-5</option>
-    <option value="cube">cube</option>
-    <option value="dodecahedron" selected>dodecahedron</option> -->
-    <option value="input_9">input_9</option>
-    <option value="block_graph_5_5" selected>block_graph_5_5</option>
-    <option value="hypercube_graph_3">hypercube_graph_3</option>
-    <option value="dodecahedral_graph">dodecahedral_graph</option>
-    <option value="complete_bipartite_graph_5_5">complete_bipartite_graph_5_5</option>
-    <option value="complete_graph_20">complete_graph_20</option>
-    <option value="full_rary_tree">full_rary_tree</option>
-    <option value="grid_graph_5_5">grid_graph_5_5</option>
-    <option value="cycle_graph_10">cycle_graph_10</option>
-  </select>
-</div>
+<div class='container'>
+  <div class='row'>
+    <div class='col-8'>
+      <svg id='graph' width=100 height=100></svg>
+      <svg id='loss' width=100 height=100></svg>
+    </div><!-- 1st col end -->
 
-<div>
-  <span>Stress </span><span id='coefText1'></span>
-  <input id='coef' class='slider' type="range" min=0 max=100 value=0>
-  <span>Angle </span><span id='coefText2'></span>
-</div>
+    <div class='col-4'>
+      <i id='play' class="fas fa-pause-circle"></i>
+      <!-- <i class="fas fa-pause-circle"></i> -->
+      <i id='reset' class="fas fa-random"></i>
 
-<div>
-  <span>LR: </span>
-  <input id='lr' class='slider' type="range" min="0" max="10" value="7" step="0.1">
-  <span id='lrText'></span>
-</div>
+      <div class='form-group'>
+        <label for='graphType'>Graph Type:</label>
+        <select id="graphType" class="form-control" style='width: 250px;'>
+          <!-- <option value="simple-4">simple-4</option> -->
+      <!--     <option value="k-5">k-5</option>
+          <option value="cycle-10">cycle-10</option>
+          <option value="tree-2-3" >tree-2-3</option>
+          <option value="tree-2-4">tree-2-4</option>
+          <option value="tree-2-5">tree-2-5</option>
+          <option value="cube">cube</option>
+          <option value="dodecahedron" selected>dodecahedron</option> -->
+          <option value="input_9">input_9</option>
+          <option value="block_graph_5_5" >block_graph_5_5</option>
+          <option value="hypercube_graph_3" >hypercube_graph_3</option>
+          <option value="dodecahedral_graph">dodecahedral_graph</option>
+          <option value="complete_bipartite_graph_5_5">complete_bipartite_graph_5_5</option>
+          <option value="complete_graph_20">complete_graph_20</option>
+          <option value="full_rary_tree">full_rary_tree</option>
+          <option value="grid_graph_5_5" >grid_graph_5_5</option>
+          <option value="cycle_graph_10" selected>cycle_graph_10</option>
+        </select>
+      </div>
 
-<div>
-  <p id='caption'></p>
-</div>
+      <div class='form-group'>
+        <form class="range-field my-4 w-100">
+          <label for='stressSlider'>Stress <span id='stressLabel'></span></label>
+          <input id='stressSlider' class='custom-range' type="range" min=0 max=10 value=1 step=0.01>
+          
+          <label for='angleSlider'>Angle <span id='angleLabel'></span></label>
+          <input id='angleSlider' class='custom-range' type="range" min=0 max=1 value=0 step=0.01>
+
+          <label for='neighborSlider'>Neighbor <span id='neighborLabel'></span></label>
+          <input id='neighborSlider' class='custom-range' type="range" min=0 max=1 value=0 step=0.01>
+
+          <label for='lrText'>Learning Rate: <span id='lrText'></span></label>
+          <input id='lr' class='custom-range' type="range" min="-6.9" max="4.6" value="0.1" step="0.1">
+        </form>
+      </div>
+      <div>
+        <p id='caption'></p>
+      </div>
+    </div><!-- 2nd col end -->
+  </div><!-- row end -->
+</div><!-- container end -->
+
+
 
 
 <script>
-
 function randInt(a,b){
   return parseInt(Math.random() * (b-a) + a);
 }
@@ -80,7 +112,7 @@ function pairwise_distance(x){
     let pdistSqaured = pairwiseDotProduct.mul(-2)
     .add(xNormSquared)
     .add(xNormSquared.transpose());
-    let pdist = pdistSqaured.clipByValue(0, Infinity).sqrt();
+    let pdist = pdistSqaured.clipByValue(0.000001, Infinity).sqrt(); //TODO sqrt not differentiable at 0
     return pdist;
   });
 }
@@ -91,25 +123,6 @@ function stress_loss(pred, target, weight){
     return pred.sub(target).square().mul(weight).mean();
   });
 }
-
-
-// function angle_loss_e1e2(x, e1, e2){
-//   let [i,j] = e1;
-//   let [k,l] = e2;
-//   return tf.tidy(()=>{
-//     let p1 = x.gather(i, 0);
-//     let p2 = x.gather(j, 0);
-//     let p3 = x.gather(k, 0);
-//     let p4 = x.gather(l, 0);
-//     let e1 = p2.sub(p1);
-//     let e2 = p4.sub(p3);
-//     let dot = e1.dot(e2);
-//     let norm1 = e1.norm();
-//     let norm2 = e2.norm();
-//     let cos = dot.div(norm1.mul(norm2));
-//     return cos.abs();
-//   });
-// }
 
 
 function sign(p, line){
@@ -180,7 +193,6 @@ function angle_loss(x, graph, sampleSize=1){
       }
     }
   }
-
   // // let sampleSize = crossings.length;
   // // let sampleSize = Math.min(5, Math.ceil(crossings.length)/2);
   // let sampleSize = 1;
@@ -199,7 +211,98 @@ function angle_loss(x, graph, sampleSize=1){
   }else{
     return tf.scalar(0.0);
   }
-  
+}
+
+// https://github.com/tensorflow/tfjs/issues/1601
+function topk(x, k){
+  const shape = x.shape.slice(0,-1);
+  const [n] = x.shape.slice(  -1),
+         m  =   shape.reduce( (k,l) => k*l, 1 );
+  const data = x.dataSync(),
+      sorted = new Int32Array(n),
+     indices = new Int32Array(m*k);
+  for( let i=0; i < m; ++i ){
+    for( let j=0; j < n; j++ )
+      sorted[j] = j + i*n;
+    sorted.sort( (i,j) => data[j] - data[i] );
+    for( let j=0; j < k; j++ )
+      indices[j + i*k] = sorted[j];
+  }
+  shape.push(k);
+  return x.flatten()
+          .gather(indices)
+          .reshape(shape);
+}
+
+
+// const customSqrt = tf.customGrad((x, save) => {
+//   save([x]);
+//   // Override gradient of our custom x ^ 2 op to be dy * abs(x);
+//   return {
+//     value: x.square(), 
+//     // gradFunc: dy => {[dy.mul(2).mul(save[0].notEqual(0.0))]},
+//     gradFunc: (dy, saved) => {
+//       let x = saved[0];
+//       return [
+//         x
+//         .mul(x.greater(0.0).toFloat())
+//         .sqrt()
+//         .reciprocal()
+//         .mul(0.5)
+//         .clipByValue(0,1000.0),
+//       ];
+//     },
+//   };
+// });
+// let x = tf.tensor1d([-1, -2, 0, 1, 2]);
+// let dx = tf.grad(x => customSqrt(x));
+
+
+// function neighbor_loss(pdist, adj, n_neighbors, sampleSize){
+//   let n_nodes = n_neighbors.length;
+//   return tf.tidy(()=>{
+//     let loss = tf.scalar(0.0);
+//     let samples = _.sample(d3.range(n_nodes), sampleSize);
+//     for (let iter=0; iter<samples.length; iter++){
+//       let i = samples[iter];
+//       let dist = pdist.gather(i);
+//       let k = n_nodes - n_neighbors[i] + 1;
+//       let values = topk(dist, k);
+//       let thresh = values.gather([k-1,k-2]).mean();
+//       let pred = thresh.sub(dist).pow(3.0).sigmoid();
+//       let truth = adj.gather(i);
+//       // loss = loss.add(truth.sub(pred).square().mean());
+//       loss = loss.add(truth.mul(pred.log()).mul(-1.0).mean()); //cross entropy loss
+//     }
+//     loss = loss.div(sampleSize);
+//     // console.log('loss', loss.dataSync());
+//     return loss;
+//   });
+// }
+
+function neighbor_loss(pdist, thresh, adj){
+  let n_nodes = pdist.shape[0];
+  return tf.tidy(()=>{
+    let pred = pdist.sub(thresh.reshape([n_nodes,1])).mul(-1).pow(5).sigmoid();
+    truth = adj;
+    let loss = truth.mul(pred.log()).mul(-1.0).mean();
+    // let loss = truth.sub(pred).square().mean()
+    // console.log('loss', loss.dataSync());
+    return loss;
+  });
+}
+
+function computeThresh(pdist, n_neighbors){
+  let n_nodes = pdist.length;
+  let res = [];
+  for(let i=0; i<n_nodes; i++){
+    let dist = pdist[i];
+    let k = n_neighbors[i];
+    let sorted = dist.sort();
+    let thresh = (sorted[k] + sorted[k+1])/2;
+    res.push(thresh);
+  }
+  return tf.tensor(res);
 }
 
 function trainOneIter(dataObj, optimizer){
@@ -207,32 +310,53 @@ function trainOneIter(dataObj, optimizer){
   let graphDistance = dataObj.graphDistance;
   let stressWeight = dataObj.stressWeight
   let graph = dataObj.graph;
+  let n_neighbors = dataObj.n_neighbors;
+  let adj = dataObj.adj;
   let coef = dataObj.coef;
+  console.log(coef);
   return optimizer.minimize(()=>{
-    console.log(optimizer.learningRate);
+    console.log('lr:', optimizer.learningRate);
     let pdist = pairwise_distance(x);
-    let l = tf.tidy(()=>{
-      let st = stress_loss(pdist, graphDistance, stressWeight);
-      let an = angle_loss(x, graph, dataObj.sampleSize || 1);
-      return st.mul(coef.stress).add(an.mul(coef.angle));
+    let loss = tf.tidy(()=>{
+      let l = tf.scalar(0.0);
+      if(coef.stress > 0){
+        let st = stress_loss(pdist, graphDistance, stressWeight);
+        l = l.add(st.mul(coef.stress));
+      }
+      if(coef.angle > 0){
+        let an = angle_loss(x, graph, dataObj.sampleSize || 1);
+        l = l.add(an.mul(coef.angle))
+      }
+      if (coef.neighbor > 0){
+
+        // let nb = neighbor_loss(pdist, adj, n_neighbors, dataObj.sampleSize || 1);
+
+        let thresh = computeThresh(pdist.arraySync(), n_neighbors);
+        let nb = neighbor_loss(pdist, thresh, adj);
+
+        l = l.add(nb.mul(coef.neighbor));
+      }
+      
+      return l;
     });
-    return l;
+    return loss;
   }, true);
 }
 
 
 function train(dataObj, remainingIter, optimizers, callback){
-  let loss_i = trainOneIter(dataObj, optimizers[0]).dataSync()[0];
-  if (callback){
-    callback({
-      remainingIter,
-      loss: loss_i,
-    });
-  }
   if (remainingIter <= 0 || !isPlaying){
     cancelAnimationFrame(dataObj.animId);
     console.log('Max iteration reached, please double click the play button to restart');
+    window.playButton.on('click')(false);
   }else{
+    let loss_i = trainOneIter(dataObj, optimizers[0]).dataSync()[0];
+    if (callback){
+      callback({
+        remainingIter,
+        loss: loss_i,
+      });
+    }
     dataObj.animId = requestAnimationFrame(()=>{
       train(dataObj, remainingIter-1, optimizers, callback);
     });
@@ -342,15 +466,16 @@ function drawGraph(svg, graph){
     let xExtent = d3.extent(graph.nodes, d=>d.x);
     let yExtent = d3.extent(graph.nodes, d=>d.y);
     
-    if (svg.xDomain !== undefined){
-      svg.xDomain[0] = Math.min(xExtent[0], svg.xDomain[0]);
-      svg.xDomain[1] = Math.max(xExtent[1], svg.xDomain[1]);
-      svg.yDomain[0] = Math.min(yExtent[0], svg.yDomain[0]);
-      svg.yDomain[1] = Math.max(yExtent[1], svg.yDomain[1]);
-    }else{
+    // if (svg.xDomain !== undefined){
+    //   svg.xDomain[0] = Math.min(xExtent[0], svg.xDomain[0]);
+    //   svg.xDomain[1] = Math.max(xExtent[1], svg.xDomain[1]);
+    //   svg.yDomain[0] = Math.min(yExtent[0], svg.yDomain[0]);
+    //   svg.yDomain[1] = Math.max(yExtent[1], svg.yDomain[1]);
+    // }else{
       svg.xDomain = xExtent;
       svg.yDomain = yExtent;
-    }
+    // }
+    
     xExtent = svg.xDomain.slice(0);
     yExtent = svg.yDomain.slice(0);
     let xSize = xExtent[1] - xExtent[0];
@@ -375,14 +500,9 @@ function drawGraph(svg, graph){
     .range(xViewport);
     svg.sy.domain(yExtent)
     .range(yViewport);
-
-    // svg.sx.domain([-7,7])
-    // .range(xViewport);
-    // svg.sy.domain([-7,7])
-    // .range(yViewport);
-
   }
   
+
   function draw(){
     svg.selectAll('.edge')
     .data(graph.edges)
@@ -411,7 +531,27 @@ function drawGraph(svg, graph){
     .data(graph.nodes)
     .enter()
     .append('g')
-    .attr('class', 'node');
+    .attr('class', 'node')
+    .call(
+      d3.drag()
+      .on('drag', (d)=>{
+        console.log(d3.event);
+        let x = d3.event.sourceEvent.offsetX;
+        let y = d3.event.sourceEvent.offsetY;
+        let dx = d3.event.dx;
+        let dy = d3.event.dy;
+        console.log(d3.event);
+        if (dx != 0 || dy != 0){
+          d.x = svg.sx.invert(x);
+          d.y = svg.sy.invert(y);
+          let newPos = window.graph.nodes.map(d=>[d.x, d.y]);
+          dataObj.x.assign(tf.tensor2d(newPos));
+          draw();
+        }
+      })
+
+    );
+    ;
 
     let newCircles = newNodes
     .append('circle')
@@ -446,30 +586,18 @@ function drawGraph(svg, graph){
 
 
 function updateSvgSize(svg_loss, svg_graph){
-  let width =  window.innerWidth/2-20;
-  let height =  window.innerHeight-250;
+  let width =  window.innerWidth/12*8 - 50;
+  let height_graph =  window.innerHeight/3*2-20;
+  let height_loss =  window.innerHeight/3*1-20;
   svg_loss
-  .attr('width', width)
-  .attr('height', height);
+  .attr('width', '100%')
+  .attr('height', height_loss);
   svg_graph
-  .attr('width', width)
-  .attr('height', height);
+  .attr('width', '100%')
+  .attr('height', height_graph);
 }
 
-function getCoef(value){
-  let sStress = d3.scaleLinear()
-  .domain([0,100])
-  .range([1,0]);
-  let sAngle = d3.scaleLinear()
-  .domain([0,100])
-  .range([0,0.1]);
 
-  return {
-    stress: sStress(value),
-    angle: sAngle(value),
-  };
-
-}
 // main
 let isPlaying = true;
 window.onload = function(){
@@ -481,17 +609,23 @@ window.onload = function(){
   let lrText = d3.select('#lrText')
   .text(lr);
 
-  let coefSlider = d3.select('#coef');
-  let coefText1 = d3.select('#coefText1');
-  let coefText2 = d3.select('#coefText2');
-  let coefSliderValue = coefSlider.node().value;
-  let coef = getCoef(coefSliderValue);
+  let stressSlider = d3.select('#stressSlider');
+  let stressLabel = d3.select('#stressLabel');
+  let angleSlider = d3.select('#angleSlider');
+  let angleLabel = d3.select('#angleLabel');
+  let neighborSlider = d3.select('#neighborSlider');
+  let neighborLabel = d3.select('#neighborLabel');
+  let coef = {
+    stress: +stressSlider.node().value,
+    angle: +angleSlider.node().value,
+    neighbor: +neighborSlider.node().value,
+  };
 
-  let sampleSize = 2;
+  let sampleSize = 20;
  
 
-  let maxPlotIter = 500;
-  let niter = 1000;
+  let maxPlotIter = 50;
+  let niter = 2000;
   let optimizers = [tf.train.sgd(lr)];
   window.optimizers = optimizers;
   let losses = [];
@@ -501,6 +635,7 @@ window.onload = function(){
   let svg_graph = d3.select('#graph');
 
   let playButton = d3.select('#play');
+  window.playButton = playButton;
   let resetButton = d3.select('#reset');
 
   
@@ -524,6 +659,12 @@ window.onload = function(){
 
       preprocess(graph, x.arraySync());
 
+      let n_neighbors = graph.graphDistance
+      .map((row)=>{
+        return row.reduce((a,b)=>b==1?a+1:a, 0);
+      });
+      let adj = graph.graphDistance.map(row=>row.map(d=>d==1.0 ? 1.0 : 0.0));
+      adj = tf.tensor2d(adj);
       let graphDistance = tf.tensor2d(graph.graphDistance);
       let stressWeight = tf.tensor2d(graph.weight);
 
@@ -531,10 +672,12 @@ window.onload = function(){
         sampleSize,
         x, 
         graphDistance, 
+        adj,
         stressWeight,
         graph,
         animId,
         coef,
+        n_neighbors,
       };
       window.dataObj = dataObj;
 
@@ -560,10 +703,10 @@ window.onload = function(){
           isPlaying = shouldPlay;
         }
         if(isPlaying){
-          d3.select(this).attr('class', 'fas fa-pause-circle');
+          playButton.attr('class', 'fas fa-pause-circle');
           play();
         }else{
-          d3.select(this).attr('class', 'fas fa-play-circle');
+          playButton.attr('class', 'fas fa-play-circle');
         }
       });
 
@@ -588,23 +731,32 @@ window.onload = function(){
 
       lrSlider.on('input', function(){
         let lr = d3.select(this).node().value;
+        lr = Math.exp(lr);
         lrText.text(lr);
         optimizers[0] = tf.train.sgd(lr);
         // optimizer.learningRate = ;
       });
 
-      coefSlider.on('input', function(){
-        let coefSliderValue = coefSlider.node().value;
-        let newCoef = getCoef(coefSliderValue);
-        coefText1.text((newCoef.stress).toFixed(2));
-        coefText2.text((newCoef.angle).toFixed(3));
-        for(let key in newCoef){
-          coef[key] = newCoef[key];
-        }
+      stressSlider.on('input', function(){
+        let value = +stressSlider.node().value;
+        stressLabel.text(value.toFixed(2));
+        coef['stress'] = value;
       });
-      coefSlider.on('input')();
+      stressSlider.on('input')();
 
+      angleSlider.on('input', function(){
+        let value = +angleSlider.node().value;
+        angleLabel.text(value.toFixed(2));
+        coef['angle'] = value;
+      });
+      angleSlider.on('input')();
 
+      neighborSlider.on('input', function(){
+        let value = +neighborSlider.node().value;
+        neighborLabel.text(value.toFixed(2));
+        coef['neighbor'] = value;
+      });
+      neighborSlider.on('input')();
     });
   }//loadGraph end
   loadGraph(fn);

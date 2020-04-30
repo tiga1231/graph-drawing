@@ -13,6 +13,7 @@ body{
 
 
 svg {
+  margin-bottom: 10px;
   border-radius: 10px;
   background-color: var(--svg-background);
 }
@@ -44,9 +45,8 @@ svg line, svg path.domain{
 
 
 /*https://www.w3schools.com/howto/howto_js_rangeslider.asp*/
-.slider {
+/*.slider {
   -webkit-appearance: none;
-  /*width: 100%;*/
   height: 5px;
   border-radius: 5px;  
   background: #d3d3d3;
@@ -55,8 +55,6 @@ svg line, svg path.domain{
   -webkit-transition: .2s;
   transition: opacity .2s;
 }
-
-
 .slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
@@ -66,12 +64,10 @@ svg line, svg path.domain{
   background: #4CAF50;
   cursor: pointer;
 }
-
-
 .slider::-moz-range-thumb {
   width: 16px;
   height: 16px;
   border-radius: 50%;
   background: #4CAF50;
   cursor: pointer;
-}
+}*/
