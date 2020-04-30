@@ -547,7 +547,7 @@ def networkx_to_json(G):
 
 def dict2tensor(d, fill=None):
   n = len(d.keys())
-  k2i = {k:i for i,k in enumerate(sorted(d.keys()))}
+  k2i = {k:i for i,k in enumerate(d.keys())}
   res = torch.zeros(len(d.keys()), len(d.keys()), device='cpu')
   for src_node, dst_nodes in d.items():
     for dst_node, distance in dst_nodes.items():

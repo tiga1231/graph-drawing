@@ -55,35 +55,36 @@
         <label for='graphType'>Graph Type:</label>
         <select id="graphType" class="form-control" style='width: 250px;'>
           <!-- <option value="simple-4">simple-4</option> -->
-      <!--     <option value="k-5">k-5</option>
-          <option value="cycle-10">cycle-10</option>
+          <option value="k-5">k-5</option>
+          <option value="cycle-10" >cycle-10</option>
           <option value="tree-2-3" >tree-2-3</option>
-          <option value="tree-2-4">tree-2-4</option>
-          <option value="tree-2-5">tree-2-5</option>
+          <option value="tree-2-4" selected>tree-2-4</option>
+          <!-- <option value="tree-2-5">tree-2-5</option> -->
           <option value="cube">cube</option>
-          <option value="dodecahedron" selected>dodecahedron</option> -->
+          <option value="dodecahedron">dodecahedron</option>
+
           <option value="input_9">input_9</option>
           <option value="block_graph_5_5" >block_graph_5_5</option>
-          <option value="hypercube_graph_3" >hypercube_graph_3</option>
-          <option value="dodecahedral_graph">dodecahedral_graph</option>
+          <!-- <option value="hypercube_graph_3" >hypercube_graph_3</option> -->
+          <!-- <option value="dodecahedral_graph">dodecahedral_graph</option> -->
           <option value="complete_bipartite_graph_5_5">complete_bipartite_graph_5_5</option>
           <option value="complete_graph_20">complete_graph_20</option>
-          <option value="full_rary_tree">full_rary_tree</option>
+          <!-- <option value="full_rary_tree">full_rary_tree</option> -->
           <option value="grid_graph_5_5" >grid_graph_5_5</option>
-          <option value="cycle_graph_10" selected>cycle_graph_10</option>
+          <!-- <option value="cycle_graph_10" selected>cycle_graph_10</option> -->
         </select>
       </div>
 
       <div class='form-group'>
         <form class="range-field my-4 w-100">
           <label for='stressSlider'>Stress <span id='stressLabel'></span></label>
-          <input id='stressSlider' class='custom-range' type="range" min=0 max=10 value=1 step=0.01>
+          <input id='stressSlider' class='custom-range' type="range" min=0 max=10 value=0 step=0.01>
           
           <label for='angleSlider'>Angle <span id='angleLabel'></span></label>
           <input id='angleSlider' class='custom-range' type="range" min=0 max=1 value=0 step=0.01>
 
           <label for='neighborSlider'>Neighbor <span id='neighborLabel'></span></label>
-          <input id='neighborSlider' class='custom-range' type="range" min=0 max=1 value=0 step=0.01>
+          <input id='neighborSlider' class='custom-range' type="range" min=0 max=10 value=1 step=0.1>
 
           <label for='lrText'>Learning Rate: <span id='lrText'></span></label>
           <input id='lr' class='custom-range' type="range" min="-6.9" max="4.6" value="0.1" step="0.1">
@@ -280,29 +281,51 @@ function topk(x, k){
 //   });
 // }
 
-function neighbor_loss(pdist, thresh, adj){
+function neighbor_loss(pdist, thresh, scale, adj, weight){
   let n_nodes = pdist.shape[0];
   return tf.tidy(()=>{
-    let pred = pdist.sub(thresh.reshape([n_nodes,1])).mul(-1).pow(5).sigmoid();
     truth = adj;
-    let loss = truth.mul(pred.log()).mul(-1.0).mean();
-    // let loss = truth.sub(pred).square().mean()
-    // console.log('loss', loss.dataSync());
+
+    let lower = -0.2;
+    let upper = 1.0;
+    let pred = pdist.sub(thresh).mul(-1).tanh().add(1.0).div(2.0).mul(upper-lower).add(lower);
+    let loss = truth.sub(pred).pow(4).mean(); //l4 norm loss
+
+
+    // let pred = pdist.sub(thresh).mul(-1);
+    // // let pred = pdist.sub(thresh).mul(-1).sigmoid();
+    // // let pred = pdist.sub(thresh).mul(-1).tanh().add(1.0).div(2.0);
+    // // let pred = pdist.sub(thresh).mul(-1).div(scale.add(0.01)).tanh().add(1.0).div(2.0);
+    // // let pred = pdist.sub(thresh).mul(-1).sigmoid();
+    
+    // // let loss = truth.sub(pred).pow(2).mean(); //mse loss
+    // // let loss = truth.sub(pred).pow(4).mean(); //l4 norm loss
+    // // let loss = tf.add(
+    // //   tf.mul(truth, pred.log()),
+    // //   tf.mul(tf.scalar(1.0).sub(truth), tf.scalar(1.0).sub(pred).log()),
+    // // ).mul(-1.0).mean();//cross entropy loss
+
+    // let loss = tf.losses.sigmoidCrossEntropy(truth, pred);
+    // // loss = loss.add(truth.sub(pred).pow(2).mean());
+    // // console.log('loss', loss.dataSync());
     return loss;
   });
 }
 
-function computeThresh(pdist, n_neighbors){
+function computeThreshAndScale(pdist, n_neighbors){
   let n_nodes = pdist.length;
-  let res = [];
+  let thresh = [];
+  let scale = [];
+
   for(let i=0; i<n_nodes; i++){
     let dist = pdist[i];
     let k = n_neighbors[i];
     let sorted = dist.sort();
-    let thresh = (sorted[k] + sorted[k+1])/2;
-    res.push(thresh);
+    thresh.push((sorted[k] + sorted[Math.min(k+1, n_nodes-1)])/2);
+    scale.push(sorted[1]);
+
   }
-  return tf.tensor(res);
+  return [tf.tensor(thresh, [n_nodes,1]), tf.tensor(scale, [n_nodes,1])];
 }
 
 function trainOneIter(dataObj, optimizer){
@@ -328,12 +351,9 @@ function trainOneIter(dataObj, optimizer){
         l = l.add(an.mul(coef.angle))
       }
       if (coef.neighbor > 0){
-
         // let nb = neighbor_loss(pdist, adj, n_neighbors, dataObj.sampleSize || 1);
-
-        let thresh = computeThresh(pdist.arraySync(), n_neighbors);
-        let nb = neighbor_loss(pdist, thresh, adj);
-
+        let [thresh, scale] = computeThreshAndScale(pdist.arraySync(), n_neighbors);
+        let nb = neighbor_loss(pdist, thresh, scale, adj, stressWeight);
         l = l.add(nb.mul(coef.neighbor));
       }
       
@@ -505,11 +525,11 @@ function drawGraph(svg, graph){
 
   function draw(){
     svg.selectAll('.edge')
-    .data(graph.edges)
+    .data(window.graph.edges)
     .exit()
     .remove();
     let edges = svg.selectAll('.edge')
-    .data(graph.edges)
+    .data(window.graph.edges)
     .enter()
     .append('line')
     .attr('class', 'edge')
@@ -524,11 +544,11 @@ function drawGraph(svg, graph){
     .attr('y2', d=>svg.sy(d.target.y));
 
     svg.selectAll('.node')
-    .data(graph.nodes)
+    .data(window.graph.nodes)
     .exit()
     .remove();
     let newNodes = svg.selectAll('.node')
-    .data(graph.nodes)
+    .data(window.graph.nodes)
     .enter()
     .append('g')
     .attr('class', 'node')
@@ -540,14 +560,11 @@ function drawGraph(svg, graph){
         let y = d3.event.sourceEvent.offsetY;
         let dx = d3.event.dx;
         let dy = d3.event.dy;
-        console.log(d3.event);
-        if (dx != 0 || dy != 0){
-          d.x = svg.sx.invert(x);
-          d.y = svg.sy.invert(y);
-          let newPos = window.graph.nodes.map(d=>[d.x, d.y]);
-          dataObj.x.assign(tf.tensor2d(newPos));
-          draw();
-        }
+        d.x = svg.sx.invert(x);
+        d.y = svg.sy.invert(y);
+        let newPos = window.graph.nodes.map(d=>[d.x, d.y]);
+        dataObj.x.assign(tf.tensor2d(newPos));
+        draw();
       })
 
     );
@@ -609,6 +626,8 @@ window.onload = function(){
   let lrText = d3.select('#lrText')
   .text(lr);
 
+  let momentum = 0.5;
+
   let stressSlider = d3.select('#stressSlider');
   let stressLabel = d3.select('#stressLabel');
   let angleSlider = d3.select('#angleSlider');
@@ -621,12 +640,13 @@ window.onload = function(){
     neighbor: +neighborSlider.node().value,
   };
 
-  let sampleSize = 20;
+  let sampleSize = 5;
  
 
   let maxPlotIter = 50;
   let niter = 2000;
-  let optimizers = [tf.train.sgd(lr)];
+
+  let optimizers = [tf.train.momentum(lr, momentum, false)];
   window.optimizers = optimizers;
   let losses = [];
   let animId = 0;
@@ -655,6 +675,7 @@ window.onload = function(){
         x = tf.variable(tf.tensor2d(graph.initPositions));
       }else{
         reset();
+        optimizers[0] = tf.train.momentum(lr, momentum, false);
       }
 
       preprocess(graph, x.arraySync());
@@ -733,7 +754,7 @@ window.onload = function(){
         let lr = d3.select(this).node().value;
         lr = Math.exp(lr);
         lrText.text(lr);
-        optimizers[0] = tf.train.sgd(lr);
+        optimizers[0] = tf.train.momentum(lr, momentum, false);
         // optimizer.learningRate = ;
       });
 
