@@ -56,9 +56,9 @@
         <select id="graphType" class="form-control" style='width: 250px;'>
           <!-- <option value="simple-4">simple-4</option> -->
           <option value="k-5">k-5</option>
-          <option value="cycle-10" >cycle-10</option>
+          <option value="cycle-10" selected>cycle-10</option>
           <option value="tree-2-3" >tree-2-3</option>
-          <option value="tree-2-4" selected>tree-2-4</option>
+          <option value="tree-2-4" >tree-2-4</option>
           <!-- <option value="tree-2-5">tree-2-5</option> -->
           <option value="cube">cube</option>
           <option value="dodecahedron">dodecahedron</option>
@@ -71,7 +71,7 @@
           <option value="complete_graph_20">complete_graph_20</option>
           <!-- <option value="full_rary_tree">full_rary_tree</option> -->
           <option value="grid_graph_5_5" >grid_graph_5_5</option>
-          <!-- <option value="cycle_graph_10" selected>cycle_graph_10</option> -->
+          <!-- <option value="cycle_graph_10">cycle_graph_10</option> -->
         </select>
       </div>
 
@@ -84,10 +84,15 @@
           <input id='angleSlider' class='custom-range' type="range" min=0 max=1 value=0 step=0.01>
 
           <label for='neighborSlider'>Neighbor <span id='neighborLabel'></span></label>
-          <input id='neighborSlider' class='custom-range' type="range" min=0 max=10 value=1 step=0.1>
+          <input id='neighborSlider' class='custom-range' type="range" min=0 max=10 value=0.1 step=0.1>
 
+          <hr>
           <label for='lrText'>Learning Rate: <span id='lrText'></span></label>
           <input id='lr' class='custom-range' type="range" min="-6.9" max="4.6" value="0.1" step="0.1">
+
+          <label for='momentumText'>Momentum: <span id='momentumText'></span></label>
+          <input id='momentum' class='custom-range' type="range" min="0.0" max="0.99" value="0.8" step="0.01">
+
         </form>
       </div>
       <div>
@@ -281,52 +286,207 @@ function topk(x, k){
 //   });
 // }
 
-function neighbor_loss(pdist, thresh, scale, adj, weight){
-  let n_nodes = pdist.shape[0];
-  return tf.tidy(()=>{
-    truth = adj;
 
-    let lower = -0.2;
-    let upper = 1.0;
-    let pred = pdist.sub(thresh).mul(-1).tanh().add(1.0).div(2.0).mul(upper-lower).add(lower);
-    let loss = truth.sub(pred).pow(4).mean(); //l4 norm loss
-
-
-    // let pred = pdist.sub(thresh).mul(-1);
-    // // let pred = pdist.sub(thresh).mul(-1).sigmoid();
-    // // let pred = pdist.sub(thresh).mul(-1).tanh().add(1.0).div(2.0);
-    // // let pred = pdist.sub(thresh).mul(-1).div(scale.add(0.01)).tanh().add(1.0).div(2.0);
-    // // let pred = pdist.sub(thresh).mul(-1).sigmoid();
-    
-    // // let loss = truth.sub(pred).pow(2).mean(); //mse loss
-    // // let loss = truth.sub(pred).pow(4).mean(); //l4 norm loss
-    // // let loss = tf.add(
-    // //   tf.mul(truth, pred.log()),
-    // //   tf.mul(tf.scalar(1.0).sub(truth), tf.scalar(1.0).sub(pred).log()),
-    // // ).mul(-1.0).mean();//cross entropy loss
-
-    // let loss = tf.losses.sigmoidCrossEntropy(truth, pred);
-    // // loss = loss.add(truth.sub(pred).pow(2).mean());
-    // // console.log('loss', loss.dataSync());
-    return loss;
-  });
-}
-
-function computeThreshAndScale(pdist, n_neighbors){
+function computeThreshScaleMargin(pdist, n_neighbors){
   let n_nodes = pdist.length;
   let thresh = [];
   let scale = [];
+  let margin = [];
 
   for(let i=0; i<n_nodes; i++){
     let dist = pdist[i];
     let k = n_neighbors[i];
     let sorted = dist.sort();
-    thresh.push((sorted[k] + sorted[Math.min(k+1, n_nodes-1)])/2);
+    let th = undefined;
+    if(k == n_nodes){
+      th = (sorted[k] + sorted[Math.min(k+1, n_nodes-1)])/2;
+    }else{
+      th = sorted[n_nodes-1] + 1;
+    }
+    let ma = sorted[Math.min(k+1, n_nodes-1)] - sorted[k];
+    thresh.push(th);
     scale.push(sorted[1]);
-
+    margin.push(ma);
   }
-  return [tf.tensor(thresh, [n_nodes,1]), tf.tensor(scale, [n_nodes,1])];
+
+
+  // if(window.prev_thresh !== undefined && window.prev_thresh.length == thresh.length){
+  //   thresh = thresh.map((d,i)=>d*0.01+window.prev_thresh[i]*0.99);
+  //   window.prev_thresh = thresh;
+  // }
+  
+  return [
+    tf.tensor(thresh, [n_nodes,1]), 
+    tf.tensor(scale, [n_nodes,1]),
+    tf.tensor(margin, [n_nodes,1]),
+  ];
 }
+
+// function neighbor_loss(pdist, thresh, scale, adj, weight){
+//   let n_nodes = pdist.shape[0];
+//   return tf.tidy(()=>{
+//     truth = adj;
+
+//     let lower = -0.2;
+//     let upper = 1.0;
+//     let pred = pdist.sub(thresh).mul(-1).tanh().add(1.0).div(2.0).mul(upper-lower).add(lower);
+//     let loss = truth.sub(pred).pow(4).mean(); //l4 norm loss
+
+
+//     // let pred = pdist.sub(thresh).mul(-1);
+//     // // let pred = pdist.sub(thresh).mul(-1).sigmoid();
+//     // // let pred = pdist.sub(thresh).mul(-1).tanh().add(1.0).div(2.0);
+//     // // let pred = pdist.sub(thresh).mul(-1).div(scale.add(0.01)).tanh().add(1.0).div(2.0);
+//     // // let pred = pdist.sub(thresh).mul(-1).sigmoid();
+    
+//     // // let loss = truth.sub(pred).pow(2).mean(); //mse loss
+//     // // let loss = truth.sub(pred).pow(4).mean(); //l4 norm loss
+//     // // let loss = tf.add(
+//     // //   tf.mul(truth, pred.log()),
+//     // //   tf.mul(tf.scalar(1.0).sub(truth), tf.scalar(1.0).sub(pred).log()),
+//     // // ).mul(-1.0).mean();//cross entropy loss
+
+//     // let loss = tf.losses.sigmoidCrossEntropy(truth, pred);
+//     // // loss = loss.add(truth.sub(pred).pow(2).mean());
+//     // // console.log('loss', loss.dataSync());
+//     return loss;
+//   });
+// }
+
+function cumulativeJaccardLoss(pred, truth){
+  // pred, truth: 1D/2D js {0,1}-arrays
+  // return: an array of intermediate values of the cumulative jaccard loss , where jaccard_loss := 1-jaccard_index;
+  pred = pred.flat();
+  truth = truth.flat();
+  let positives = math.sum(truth);
+  let res = [];
+  for(let i=0; i<pred.length; i++){
+    let misclassified = i;
+    let loss = misclassified/(misclassified+positives);
+    res.push(loss);
+  }
+  return res;
+}
+
+
+function zip(){
+  let a = arguments[0];
+  let res = [];
+  for(let i=0; i<a.length; i++){
+    res.push(
+      d3.range(arguments.length).map((j)=>arguments[j][i])
+    );
+  }
+  return res;
+}
+
+
+function jaccardIndex(pred, truth){
+  pred = pred.flat();
+  truth = truth.flat();
+  let cum_intersect = 0;
+  let cum_union = 0;
+  for(let i=0; i<pred.length; i++){
+    let interect = (pred[i]>0.5 && truth[i]==1) ? 1:0;
+    let union = (pred[i]>0.5 || truth[i]==1) ? 1:0;
+    cum_intersect += interect;
+    cum_union += union;
+  }
+  let jaccard = 0;
+  if(cum_union > 0){
+    jaccard = cum_intersect/cum_union;
+  }
+  return jaccard;
+}
+
+
+function jaccardMargins(error, predicted_labels, truth){
+  let error_index_pairs = zip(error, d3.range(error.length));
+  let error_index_pairs_sorted = error_index_pairs.sort((a,b)=>b[0]-a[0]);
+  let error_sorted = error_index_pairs_sorted.map(d=>d[0]);
+  let index_sorted = error_index_pairs_sorted.map(d=>d[1]);
+  let predicted_labels_sorted = index_sorted.map((i)=>predicted_labels[i]);
+  let truth_sorted = index_sorted.map((i)=>truth[i]);
+
+  let cum_jaccard_loss_sorted = cumulativeJaccardLoss(predicted_labels_sorted, truth_sorted);
+  let jaccard_margins_sorted = cum_jaccard_loss_sorted.map((d,i)=>{
+    if(i==0){
+      return d;
+    }else{
+      return (d - cum_jaccard_loss_sorted[i-1]);
+    }
+  });
+  let margins = zip(index_sorted, jaccard_margins_sorted).sort((a,b)=>a[0]-b[0]).map(d=>d[1]);
+  return margins;
+}
+
+
+function lovaszHingeLoss(pred, truth){
+  //pred: 1D/2D tf vector
+  //truth: 1D/2D js array
+  //return: a loss (with type=tf.scalar) that is differentiable wrt pred (and thus x)
+  //
+  return tf.tidy(()=>{
+    let n = truth.length;
+    let eye = tf.eye(pred.shape[0]);
+    pred = pred.mul(tf.scalar(1.0).sub(eye)).sub(eye); //never consider the diagonal entries
+    // pred = pred.mul(tf.scalar(1.0).sub(eye)); //never consider the diagonal entries
+    
+    pred = pred.reshape([-1]);
+    truth = truth.flat();
+
+    //hinge
+    let error = tf.scalar(1.0).sub(
+      tf.mul( pred, tf.tensor(truth).mul(2).sub(1) )
+    ).relu();
+    let predicted_labels = pred.arraySync().map(d=>d>0.0 ? 1.0 : 0.0);
+
+    //softmax
+    // pred = pred.tanh().mul(2).sub(1);
+    // let error = pred.sub(truth).abs();
+    // let predicted_labels = pred.arraySync().map(d=>d>0.5 ? 1.0 : 0.0);
+
+    let coef = jaccardMargins(error.arraySync(), predicted_labels, truth);
+    return error.dot(coef);
+  });
+  
+  
+}
+
+
+function neighbor_loss(pdist, adj, thresh, scale, margin){
+  return tf.tidy(()=>{
+    let truth = adj;
+    let pred = pdist.sub( thresh.clipByValue(0.1, 1.0) ).mul(-1);
+    let loss = lovaszHingeLoss(pred, truth.arraySync());
+    return loss;
+  });
+}
+
+
+// function neighbor_loss(pdist, adj, n_neighbors, sampleSize=10000){
+//   let n_nodes = n_neighbors.length;
+//   return tf.tidy(()=>{
+//     let loss = tf.scalar(0.0);
+//     let samples = _.sample(d3.range(n_nodes), sampleSize);
+//     for (let iter=0; iter<samples.length; iter++){
+//       let i = samples[iter];
+//       let dist = pdist.gather(i);
+//       let k = n_nodes - n_neighbors[i] + 1;
+//       let values = topk(dist, k);
+//       let thresh = values.gather([k-1,k-2]).mean();
+//       let pred = dist.sub(thresh).mul(-1);
+//       let truth = adj.gather(i);
+//       loss = loss.add(lovaszHingeLoss(pred, truth.arraySync()));
+//     }
+//     loss = loss.div(sampleSize);
+//     // console.log('loss', loss.dataSync());
+//     return loss;
+//   });
+// }
+
+
+
 
 function trainOneIter(dataObj, optimizer){
   let x = dataObj.x;
@@ -336,9 +496,7 @@ function trainOneIter(dataObj, optimizer){
   let n_neighbors = dataObj.n_neighbors;
   let adj = dataObj.adj;
   let coef = dataObj.coef;
-  console.log(coef);
   return optimizer.minimize(()=>{
-    console.log('lr:', optimizer.learningRate);
     let pdist = pairwise_distance(x);
     let loss = tf.tidy(()=>{
       let l = tf.scalar(0.0);
@@ -348,12 +506,12 @@ function trainOneIter(dataObj, optimizer){
       }
       if(coef.angle > 0){
         let an = angle_loss(x, graph, dataObj.sampleSize || 1);
-        l = l.add(an.mul(coef.angle))
+        l = l.add(an.mul(coef.angle));
       }
       if (coef.neighbor > 0){
-        // let nb = neighbor_loss(pdist, adj, n_neighbors, dataObj.sampleSize || 1);
-        let [thresh, scale] = computeThreshAndScale(pdist.arraySync(), n_neighbors);
-        let nb = neighbor_loss(pdist, thresh, scale, adj, stressWeight);
+        // let nb = neighbor_loss(pdist, adj, n_neighbors, 1000);
+        let [thresh, scale, margin] = computeThreshScaleMargin(pdist.arraySync(), n_neighbors);
+        let nb = neighbor_loss(pdist, adj, thresh, scale, margin);
         l = l.add(nb.mul(coef.neighbor));
       }
       
@@ -622,11 +780,14 @@ window.onload = function(){
   let fn = `data/${graphTypeSelect.node().value}.json`;
 
   let lrSlider = d3.select('#lr');
-  let lr = lrSlider.node().value;
+  window.lr = +lrSlider.node().value;
   let lrText = d3.select('#lrText')
   .text(lr);
 
-  let momentum = 0.5;
+  let momentumSlider = d3.select('#momentum');
+  window.momentum = +momentumSlider.node().value;
+  let momentumText = d3.select('#momentumText')
+  .text(momentum);
 
   let stressSlider = d3.select('#stressSlider');
   let stressLabel = d3.select('#stressLabel');
@@ -751,11 +912,16 @@ window.onload = function(){
       });
 
       lrSlider.on('input', function(){
-        let lr = d3.select(this).node().value;
+        window.lr = +d3.select(this).node().value;
         lr = Math.exp(lr);
         lrText.text(lr);
         optimizers[0] = tf.train.momentum(lr, momentum, false);
-        // optimizer.learningRate = ;
+      });
+
+      momentumSlider.on('input', function(){
+        window.momentum = +d3.select(this).node().value;
+        momentumText.text(window.momentum);
+        optimizers[0] = tf.train.momentum(window.lr, momentum, false);
       });
 
       stressSlider.on('input', function(){
