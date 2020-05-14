@@ -78,13 +78,18 @@
       <div class='form-group'>
         <form class="range-field my-4 w-100">
           <label for='stressSlider'>Stress <span id='stressLabel'></span></label>
-          <input id='stressSlider' class='custom-range' type="range" min=0 max=10 value=0 step=0.01>
+          <input id='stressSlider' class='custom-range' type="range" min=0 max=10 value=0.01 step=0.01>
           
+          <label for='edgeUniformitySlider'>Edge Uniformity <span id='edgeUniformityLabel'></span></label>
+          <input id='edgeUniformitySlider' class='custom-range' type="range" min=0 max=1 value=0.0 step=0.01>
+
           <label for='angleSlider'>Angle <span id='angleLabel'></span></label>
           <input id='angleSlider' class='custom-range' type="range" min=0 max=1 value=0 step=0.01>
 
           <label for='neighborSlider'>Neighbor <span id='neighborLabel'></span></label>
-          <input id='neighborSlider' class='custom-range' type="range" min=0 max=10 value=0.1 step=0.1>
+          <input id='neighborSlider' class='custom-range' type="range" min=0 max=10 value=0.0 step=0.1>
+
+          
 
           <hr>
           <label for='lrText'>Learning Rate: <span id='lrText'></span></label>
@@ -118,7 +123,7 @@ function pairwise_distance(x){
     let pdistSqaured = pairwiseDotProduct.mul(-2)
     .add(xNormSquared)
     .add(xNormSquared.transpose());
-    let pdist = pdistSqaured.clipByValue(0.000001, Infinity).sqrt(); //TODO sqrt not differentiable at 0
+    let pdist = pdistSqaured.clipByValue(0.000001, Infinity).sqrt();
     return pdist;
   });
 }
@@ -127,6 +132,22 @@ function pairwise_distance(x){
 function stress_loss(pred, target, weight){
   return tf.tidy(()=>{
     return pred.sub(target).square().mul(weight).mean();
+  });
+}
+
+
+function edge_uniformity_loss(pdist, adj){
+  let n_nodes = pdist.shape[0];
+  let N = adj.sum(); // number of edges (*2)
+  return tf.tidy(()=>{
+    let mean = pdist.mul(adj).sum().div(N);
+    return pdist
+    .sub(mean)
+    .mul(adj)
+    .square()
+    .sum()
+    .div(N)
+    .sqrt();
   });
 }
 
@@ -281,7 +302,6 @@ function topk(x, k){
 //       loss = loss.add(truth.mul(pred.log()).mul(-1.0).mean()); //cross entropy loss
 //     }
 //     loss = loss.div(sampleSize);
-//     // console.log('loss', loss.dataSync());
 //     return loss;
 //   });
 // }
@@ -308,12 +328,6 @@ function computeThreshScaleMargin(pdist, n_neighbors){
     scale.push(sorted[1]);
     margin.push(ma);
   }
-
-
-  // if(window.prev_thresh !== undefined && window.prev_thresh.length == thresh.length){
-  //   thresh = thresh.map((d,i)=>d*0.01+window.prev_thresh[i]*0.99);
-  //   window.prev_thresh = thresh;
-  // }
   
   return [
     tf.tensor(thresh, [n_nodes,1]), 
@@ -348,7 +362,6 @@ function computeThreshScaleMargin(pdist, n_neighbors){
 
 //     // let loss = tf.losses.sigmoidCrossEntropy(truth, pred);
 //     // // loss = loss.add(truth.sub(pred).pow(2).mean());
-//     // // console.log('loss', loss.dataSync());
 //     return loss;
 //   });
 // }
@@ -442,7 +455,7 @@ function lovaszHingeLoss(pred, truth){
     let predicted_labels = pred.arraySync().map(d=>d>0.0 ? 1.0 : 0.0);
 
     //softmax
-    // pred = pred.tanh().mul(2).sub(1);
+    // pred = pred.sigmoid();
     // let error = pred.sub(truth).abs();
     // let predicted_labels = pred.arraySync().map(d=>d>0.5 ? 1.0 : 0.0);
 
@@ -457,7 +470,8 @@ function lovaszHingeLoss(pred, truth){
 function neighbor_loss(pdist, adj, thresh, scale, margin){
   return tf.tidy(()=>{
     let truth = adj;
-    let pred = pdist.sub( thresh.clipByValue(0.1, 1.0) ).mul(-1);
+    // let pred = pdist.sub( thresh ).mul(-1);
+    let pred = pdist.sub( thresh.clipByValue(0.2, 1.0) ).mul(-1);
     let loss = lovaszHingeLoss(pred, truth.arraySync());
     return loss;
   });
@@ -513,6 +527,10 @@ function trainOneIter(dataObj, optimizer){
         let [thresh, scale, margin] = computeThreshScaleMargin(pdist.arraySync(), n_neighbors);
         let nb = neighbor_loss(pdist, adj, thresh, scale, margin);
         l = l.add(nb.mul(coef.neighbor));
+      }
+      if(coef.edge_uniformity > 0){
+        let eu = edge_uniformity_loss(pdist, adj);
+        l = l.add(eu.mul(coef.edge_uniformity));
       }
       
       return l;
@@ -713,7 +731,6 @@ function drawGraph(svg, graph){
     .call(
       d3.drag()
       .on('drag', (d)=>{
-        console.log(d3.event);
         let x = d3.event.sourceEvent.offsetX;
         let y = d3.event.sourceEvent.offsetY;
         let dx = d3.event.dx;
@@ -795,17 +812,21 @@ window.onload = function(){
   let angleLabel = d3.select('#angleLabel');
   let neighborSlider = d3.select('#neighborSlider');
   let neighborLabel = d3.select('#neighborLabel');
+  let edgeUniformitySlider = d3.select('#edgeUniformitySlider');
+  let edgeUniformityLabel = d3.select('#edgeUniformityLabel');
+
   let coef = {
     stress: +stressSlider.node().value,
     angle: +angleSlider.node().value,
     neighbor: +neighborSlider.node().value,
+    edge_uniformity: +edgeUniformitySlider.node().value,
   };
 
   let sampleSize = 5;
  
 
   let maxPlotIter = 50;
-  let niter = 2000;
+  let niter = 20000;
 
   let optimizers = [tf.train.momentum(lr, momentum, false)];
   window.optimizers = optimizers;
@@ -944,6 +965,14 @@ window.onload = function(){
         coef['neighbor'] = value;
       });
       neighborSlider.on('input')();
+
+      edgeUniformitySlider.on('input', function(){
+        let value = +edgeUniformitySlider.node().value;
+        edgeUniformityLabel.text(value.toFixed(2));
+        coef['edge_uniformity'] = value;
+      });
+      edgeUniformitySlider.on('input')();
+
     });
   }//loadGraph end
   loadGraph(fn);
