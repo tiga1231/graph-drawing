@@ -95,7 +95,12 @@
           <label for='crossingNumberSlider'>Crossing Number <span id='crossingNumberLabel'></span></label>
           <input id='crossingNumberSlider' class='custom-range' type="range" min=0 max=1 value=0.0 step=0.01>
 
+          <label for='areaSlider'>Area <span id='areaLabel'></span></label>
+          <input id='areaSlider' class='custom-range' type="range" min=0 max=1 value=0.0 step=0.01>
+          <hr>
 
+          <label for='desiredAreaSlider'>Desired Area <span id='desiredAreaLabel'></span></label>
+          <input id='desiredAreaSlider' class='custom-range' type="range" min=0.1 max=20 value=1.0 step=0.01>
           
 
           <hr>
@@ -540,9 +545,12 @@ function center_loss(x){
     return x.mean(0).pow(2).sum();
   });
 }
+
+
 let boundaries = undefined;
 let boundary_lr = 0.2;
 let boundary_optim = undefined;
+
 function crossing_number_loss(x, edgePairs){
   let [edges1, edges2] = edgePairs;
 
@@ -597,6 +605,30 @@ function crossing_number_loss(x, edgePairs){
     let loss1 = tf.relu(tf.scalar(1).sub(pred1.mul(1))).mean(); 
     let loss2 = tf.relu(tf.scalar(1).sub(pred2.mul(-1))).mean();
     let loss = loss1.add(loss2);
+    return loss;
+  });
+}
+
+
+function area_loss(x, pdist, edges, desiredArea){
+  if(desiredArea===undefined){
+    // desiredArea = Math.sqrt(edges.length) / 4;
+    desiredArea = 2;
+    // desiredArea = pdist.max();
+    console.log(desiredArea);
+  }
+  let minEdgeLength = math.min(pdist.arraySync().flat().filter(d=>d>0.001));
+  return tf.tidy(()=>{
+    let scale = Math.max(2.0, minEdgeLength);
+    let min = x.min(0);
+    let max = x.max(0);
+
+    // min = tf.scalar(1.0).div(x.sub(min).add(0.01)).mul(x).mean(0);
+    // max = tf.scalar(1.0).div(max.sub(x).add(0.01)).mul(x).mean(0);
+    
+    let sideLengths = max.sub(min).div(scale);
+    let area = sideLengths.gather(0).mul(sideLengths.gather(1));
+    let loss = area.sub(desiredArea).pow(2);
     return loss;
   });
 }
@@ -659,6 +691,10 @@ function trainOneIter(dataObj, optimizer){
       if(coef.angular_resolution > 0){
         let ar = angular_resolution_loss(x, dataObj.neighbors);
         l = l.add(ar.mul(coef.angular_resolution));
+      }
+      if(coef.area > 0){
+        let al = area_loss(x, pdist, dataObj.edges, dataObj.desiredArea);
+        l = l.add(al.mul(coef.area));
       }
 
       
@@ -965,7 +1001,10 @@ window.onload = function(){
   let edgeUniformityLabel = d3.select('#edgeUniformityLabel');
   let crossingNumberSlider = d3.select('#crossingNumberSlider');
   let crossingNumberLabel = d3.select('#crossingNumberLabel');
-
+  let areaSlider = d3.select('#areaSlider');
+  let areaLabel = d3.select('#areaLabel');
+  let desiredAreaSlider = d3.select('#desiredAreaSlider');
+  let desiredAreaLabel = d3.select('#desiredAreaLabel');
 
 
   let coef = {
@@ -975,7 +1014,7 @@ window.onload = function(){
     edge_uniformity: +edgeUniformitySlider.node().value,
     crossing_number: +crossingNumberSlider.node().value,
     angular_resolution: +angularResolutionSlider.node().value,
-
+    area: +areaSlider.node().value,
   };
 
   let sampleSize = 5;
@@ -1031,6 +1070,8 @@ window.onload = function(){
       let stressWeight = tf.tensor2d(graph.weight);
       let edgePairs = getEdgePairs(graph);
       let neighbors = graph2neighbors(graph);
+      let edges = graph.edges.map(d=>[d.source.index, d.target.index]);
+
       let dataObj = {
         sampleSize,
         x, 
@@ -1043,6 +1084,8 @@ window.onload = function(){
         n_neighbors,
         edgePairs,
         neighbors,
+        edges,
+        desiredArea: +desiredAreaSlider.node().value,
       };
       window.dataObj = dataObj;
 
@@ -1148,6 +1191,20 @@ window.onload = function(){
         coef['angular_resolution'] = value;
       });
       angularResolutionSlider.on('input')();
+
+      areaSlider.on('input', function(){
+        let value = +areaSlider.node().value;
+        areaLabel.text(value.toFixed(2));
+        coef['area'] = value;
+      });
+      areaSlider.on('input')();
+
+      desiredAreaSlider.on('input', function(){
+        let value = +desiredAreaSlider.node().value;
+        desiredAreaLabel.text(value.toFixed(2));
+        dataObj['desiredArea'] = value;
+      });
+      desiredAreaSlider.on('input')();
 
     });
   }//loadGraph end
