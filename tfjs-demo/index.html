@@ -594,8 +594,8 @@ function crossing_number_loss(x, edgePairs){
     let pred2 = e2.matMul(boundaries);
 
     //svm loss = mean(relu(1 - pred*target)) + lambda * ||w||^2; we pick lambda = 0 (hard boundary)
-    let loss1 = tf.relu(tf.scalar(1).sub(pred1.mul(1))).sum(); 
-    let loss2 = tf.relu(tf.scalar(1).sub(pred2.mul(-1))).sum();
+    let loss1 = tf.relu(tf.scalar(1).sub(pred1.mul(1))).mean(); 
+    let loss2 = tf.relu(tf.scalar(1).sub(pred2.mul(-1))).mean();
     let loss = loss1.add(loss2);
     return loss;
   });
