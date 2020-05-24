@@ -56,11 +56,11 @@
         <select id="graphType" class="form-control" style='width: 250px;'>
           <option value="k-5">k-5</option>
           <option value="path-10">path-10</option>
-          <option value="cycle-10" selected>cycle-10</option>
+          <option value="cycle-10" >cycle-10</option>
           <option value="tree-2-3" >tree-2-3</option>
           <option value="tree-2-4" >tree-2-4</option>
           <!-- <option value="tree-2-5">tree-2-5</option> -->
-          <option value="cube">cube</option>
+          <option value="cube" selected>cube</option>
           <option value="dodecahedron">dodecahedron</option>
 
           <option value="input_9">input_9</option>
@@ -68,13 +68,14 @@
           <option value="complete_bipartite_graph_5_5">complete_bipartite_graph_5_5</option>
           <option value="complete_graph_20">complete_graph_20</option>
           <option value="grid_graph_5_5" >grid_graph_5_5</option>
+          <option value="grid_graph_10_6" >grid_graph_10_6</option>
         </select>
       </div>
 
       <div class='form-group'>
         <form class="range-field my-4 w-100">
           <label for='stressSlider'>Stress <span id='stressLabel'></span></label>
-          <input id='stressSlider' class='custom-range' type="range" min=0 max=1 value=0.01 step=0.01>
+          <input id='stressSlider' class='custom-range' type="range" min=0 max=1 value=0.5 step=0.01>
           
           <label for='vertexResolutionSlider'>Vertex Resolution <span id='vertexResolutionLabel'></span></label>
           <input id='vertexResolutionSlider' class='custom-range' type="range" min=0 max=1 value=0.01 step=0.01>
@@ -83,23 +84,23 @@
           <input id='edgeUniformitySlider' class='custom-range' type="range" min=0 max=1 value=0.0 step=0.01>
 
           <label for='neighborSlider'>Neighborhood Preservation <span id='neighborLabel'></span></label>
-          <input id='neighborSlider' class='custom-range' type="range" min=0 max=10 value=0.0 step=0.1>
+          <input id='neighborSlider' class='custom-range' type="range" min=0 max=10 value=0.0 step=0.01>
 
           <label for='angleSlider'>Crossing Angle <span id='angleLabel'></span></label>
           <input id='angleSlider' class='custom-range' type="range" min=0 max=1 value=0 step=0.01>
 
           <label for='angularResolutionSlider'>Angular Resolution <span id='angularResolutionLabel'></span></label>
-          <input id='angularResolutionSlider' class='custom-range' type="range" min=0 max=10 value=0 step=0.1>
+          <input id='angularResolutionSlider' class='custom-range' type="range" min=0 max=10 value=0 step=0.01>
 
-          
+          <label for='aspectRatioSlider'>Aspect Ratio <span id='aspectRatioLabel'></span></label>
+          <input id='aspectRatioSlider' class='custom-range' type="range" min=0 max=1 value=0.0 step=0.01>
+
+          <label for='gabrielSlider'>Gabriel <span id='gabrielLabel'></span></label>
+          <input id='gabrielSlider' class='custom-range' type="range" min=0 max=1 value=0.0 step=0.01>
+
 
           <label for='crossingNumberSlider'>Crossing Number <span id='crossingNumberLabel'></span></label>
           <input id='crossingNumberSlider' class='custom-range' type="range" min=0 max=1 value=0.0 step=0.01>
-
-
-
-
-          <hr>
           
           <!-- <label for='desiredAreaSlider'>Desired Area <span id='desiredAreaLabel'></span></label>
           <input id='desiredAreaSlider' class='custom-range' type="range" min=0.1 max=20 value=1.0 step=0.01>
@@ -108,10 +109,10 @@
 
           <hr>
           <label for='lrText'>Learning Rate: <span id='lrText'></span></label>
-          <input id='lr' class='custom-range' type="range" min="-6.9" max="-0.69" value="-0.80" step="0.1">
+          <input id='lr' class='custom-range' type="range" min="-6.9" max="-0.7985076962177716" value="-0.80" step="0.01">
 
           <label for='momentumText'>Momentum: <span id='momentumText'></span></label>
-          <input id='momentum' class='custom-range' type="range" min="0.0" max="0.99" value="0.8" step="0.01">
+          <input id='momentum' class='custom-range' type="range" min="0.0" max="0.99" value="0.5" step="0.01">
 
         </form>
       </div>
@@ -146,7 +147,7 @@ function pairwise_distance(x){
 
 function stress_loss(pred, target, weight){
   return tf.tidy(()=>{
-    return pred.sub(target).square().mul(weight).sum();
+    return pred.sub(target).square().mul(weight).sum().div(4);
   });
 }
 
@@ -167,14 +168,19 @@ function edge_uniformity_loss(pdist, adj){
 }
 
 
-function vertex_resolution_loss(pdist, resolution=0.05){
+function vertex_resolution_loss(pdist, resolution=0.1){
   return tf.tidy(()=>{
     let mask = tf.scalar(1.0).sub(tf.eye(pdist.shape[0]));
     let max = pdist.max();
     let pdist_normalized = pdist.div(max.add(0.001));
+
+    // let r = pdist_normalized.sub(resolution).div(-resolution).relu();
+    // let loss = r.pow(2).mul( tf.scalar(3).sub(r.mul(2)) );//smoothstep: r^2 * (3-2r)
+
     let r = pdist_normalized.sub(resolution).div(-resolution).relu();
-    let loss = r.pow(2).mul( tf.scalar(3).sub(r.mul(2)) );//smooth step: r^2 * (3-2r)
-    loss = loss.mul(mask).sum().mul(0.005);
+    let loss = tf.scalar(1.0).sub(tf.scalar(1.001).sub(r.pow(2)));
+
+    loss = loss.mul(mask).sum().mul(0.02);
     return loss;
   });
 }
@@ -341,28 +347,6 @@ function topk(x, k){
 // let dx = tf.grad(x => customSqrt(x));
 
 
-// function neighbor_loss(pdist, adj, n_neighbors, sampleSize){
-//   let n_nodes = n_neighbors.length;
-//   return tf.tidy(()=>{
-//     let loss = tf.scalar(0.0);
-//     let samples = _.sample(d3.range(n_nodes), sampleSize);
-//     for (let iter=0; iter<samples.length; iter++){
-//       let i = samples[iter];
-//       let dist = pdist.gather(i);
-//       let k = n_nodes - n_neighbors[i] + 1;
-//       let values = topk(dist, k);
-//       let thresh = values.gather([k-1,k-2]).mean();
-//       let pred = thresh.sub(dist).pow(3.0).sigmoid();
-//       let truth = adj.gather(i);
-//       // loss = loss.add(truth.sub(pred).square().mean());
-//       loss = loss.add(truth.mul(pred.log()).mul(-1.0).mean()); //cross entropy loss
-//     }
-//     loss = loss.div(sampleSize);
-//     return loss;
-//   });
-// }
-
-
 function computeThreshScaleMargin(pdist, n_neighbors){
   let n_nodes = pdist.length;
   let thresh = [];
@@ -392,35 +376,6 @@ function computeThreshScaleMargin(pdist, n_neighbors){
   ];
 }
 
-// function neighbor_loss(pdist, thresh, scale, adj, weight){
-//   let n_nodes = pdist.shape[0];
-//   return tf.tidy(()=>{
-//     truth = adj;
-
-//     let lower = -0.2;
-//     let upper = 1.0;
-//     let pred = pdist.sub(thresh).mul(-1).tanh().add(1.0).div(2.0).mul(upper-lower).add(lower);
-//     let loss = truth.sub(pred).pow(4).mean(); //l4 norm loss
-
-
-//     // let pred = pdist.sub(thresh).mul(-1);
-//     // // let pred = pdist.sub(thresh).mul(-1).sigmoid();
-//     // // let pred = pdist.sub(thresh).mul(-1).tanh().add(1.0).div(2.0);
-//     // // let pred = pdist.sub(thresh).mul(-1).div(scale.add(0.01)).tanh().add(1.0).div(2.0);
-//     // // let pred = pdist.sub(thresh).mul(-1).sigmoid();
-    
-//     // // let loss = truth.sub(pred).pow(2).mean(); //mse loss
-//     // // let loss = truth.sub(pred).pow(4).mean(); //l4 norm loss
-//     // // let loss = tf.add(
-//     // //   tf.mul(truth, pred.log()),
-//     // //   tf.mul(tf.scalar(1.0).sub(truth), tf.scalar(1.0).sub(pred).log()),
-//     // // ).mul(-1.0).mean();//cross entropy loss
-
-//     // let loss = tf.losses.sigmoidCrossEntropy(truth, pred);
-//     // // loss = loss.add(truth.sub(pred).pow(2).mean());
-//     return loss;
-//   });
-// }
 
 function cumulativeJaccardLoss(pred, truth){
   // pred, truth: 1D/2D js {0,1}-arrays
@@ -534,27 +489,6 @@ function neighbor_loss(pdist, adj, thresh, scale, margin){
 }
 
 
-// function neighbor_loss(pdist, adj, n_neighbors, sampleSize=10000){
-//   let n_nodes = n_neighbors.length;
-//   return tf.tidy(()=>{
-//     let loss = tf.scalar(0.0);
-//     let samples = _.sample(d3.range(n_nodes), sampleSize);
-//     for (let iter=0; iter<samples.length; iter++){
-//       let i = samples[iter];
-//       let dist = pdist.gather(i);
-//       let k = n_nodes - n_neighbors[i] + 1;
-//       let values = topk(dist, k);
-//       let thresh = values.gather([k-1,k-2]).mean();
-//       let pred = dist.sub(thresh).mul(-1);
-//       let truth = adj.gather(i);
-//       loss = loss.add(lovaszHingeLoss(pred, truth.arraySync()));
-//     }
-//     loss = loss.div(sampleSize);
-//     // console.log('loss', loss.dataSync());
-//     return loss;
-//   });
-// }
-
 function center_loss(x){
   return tf.tidy(()=>{
     return x.mean(0).pow(2).sum();
@@ -563,16 +497,20 @@ function center_loss(x){
 
 
 let boundaries = undefined;
-let boundary_lr = 0.2;
+let boundary_lr = 0.15;
 let boundary_optim = undefined;
 
 function crossing_number_loss(x, edgePairs){
   let [edges1, edges2] = edgePairs;
 
   //stochastic
-  // let samples = new Set(_.sample(d3.range(edges1.length), 1));
-  // edges1 = edges1.filter((d,i)=>samples.has(i));
-  // edges2 = edges2.filter((d,i)=>samples.has(i));
+  let samples = new Set(_.sample(d3.range(edges1.length), 10));
+  edges1 = edges1.filter((d,i)=>samples.has(i));
+  edges2 = edges2.filter((d,i)=>samples.has(i));
+  boundaries = tf.variable(
+    tf.randomUniform([edges1.length, 3, 1], -0.1, 0.1));
+  boundary_optim = tf.train.adam(boundary_lr);
+
 
   if(boundaries === undefined){
     boundaries = tf.variable(
@@ -593,8 +531,8 @@ function crossing_number_loss(x, edgePairs){
       let pred2 = e2.matMul(boundaries);
 
       //svm loss = mean(relu(1 - pred*target)) + lambda * ||w||^2; we pick lambda = 0 (hard boundary)
-      let loss1 = tf.relu(tf.scalar(1).sub(pred1.mul(1))).mean(); 
-      let loss2 = tf.relu(tf.scalar(1).sub(pred2.mul(-1))).mean();
+      let loss1 = tf.relu(tf.scalar(1).sub(pred1.mul(1))).sum(); 
+      let loss2 = tf.relu(tf.scalar(1).sub(pred2.mul(-1))).sum();
       let margin = boundaries.slice([0,0,0], [boundaries.shape[0], 2, 1]).norm(2,0).sum();
       let loss = loss1.add(loss2).add(margin.mul(0.01));
 
@@ -625,29 +563,74 @@ function crossing_number_loss(x, edgePairs){
 }
 
 
-function area_loss(x, pdist, edges, desiredArea){
-  if(desiredArea===undefined){
-    // desiredArea = Math.sqrt(edges.length) / 4;
-    desiredArea = 2;
-    // desiredArea = pdist.max();
-    console.log(desiredArea);
-  }
-  let minEdgeLength = math.min(pdist.arraySync().flat().filter(d=>d>0.001));
-  return tf.tidy(()=>{
-    let scale = Math.max(2.0, minEdgeLength);
-    let min = x.min(0);
-    let max = x.max(0);
+function gabriel_loss(x){
 
-    // min = tf.scalar(1.0).div(x.sub(min).add(0.01)).mul(x).mean(0);
-    // max = tf.scalar(1.0).div(max.sub(x).add(0.01)).mul(x).mean(0);
-    
-    let sideLengths = max.sub(min).div(scale);
-    let area = sideLengths.gather(0).mul(sideLengths.gather(1));
-    let loss = area.sub(desiredArea).pow(2);
-    return loss;
+}
+
+function rotations(n=10){
+  return tf.tidy(()=>{
+    let theta = tf.linspace(0, Math.PI*2, n+1).slice([0], [n]);
+    let cos = tf.cos(theta);
+    let sin = tf.sin(theta);
+    return tf.stack([cos, sin, sin.mul(-1), cos], -1).reshape([n,2,2]);
   });
 }
 
+
+function softmax(x, dims=[0], sensitivity=1.0){
+  return tf.tidy(()=>{
+    let y = x.sub(x.max());
+    let exp = tf.exp(y.mul(sensitivity));
+
+    let sum = exp;
+    for(let d of dims){
+      sum = sum.sum(d,true);
+    }
+    let res = exp.div(sum);
+    return res;
+  });
+}
+
+
+function aspect_ratio_loss(x){
+  return tf.tidy(()=>{
+    let n = 7;
+    let rot = rotations(n);
+    x = x.broadcastTo([n,...x.shape]).matMul(rot);
+    let maxWeight = softmax(x, [0,2], 0.1);
+    let minWeight = softmax(x.mul(-1), [0,2], 0.1);
+    let max = x.mul(maxWeight).sum(1);
+    let min = x.mul(minWeight).sum(1);
+    let size = max.sub(min).add(1); // add 1 for stability on cube & path-10;
+    let prob = size.div(size.sum(1, true)); //n two-category probabilities;
+    let cross_entropy = prob.log().sum().div(n).mul(-0.5); //cross entropy loss against uniform distribution={0.5, 0.5}
+    return cross_entropy.mul(500.0);
+  });
+}
+
+// function area_loss(x, pdist, edges, desiredArea){
+//   if(desiredArea===undefined){
+//     // desiredArea = Math.sqrt(edges.length) / 4;
+//     desiredArea = 2;
+//     // desiredArea = pdist.max();
+//     console.log(desiredArea);
+//   }
+//   let minEdgeLength = math.min(pdist.arraySync().flat().filter(d=>d>0.001));
+//   return tf.tidy(()=>{
+//     let scale = Math.max(2.0, minEdgeLength);
+//     let min = x.min(0);
+//     let max = x.max(0);
+
+//     // min = tf.scalar(1.0).div(x.sub(min).add(0.01)).mul(x).mean(0);
+//     // max = tf.scalar(1.0).div(max.sub(x).add(0.01)).mul(x).mean(0);
+    
+//     let sideLengths = max.sub(min).div(scale);
+//     let area = sideLengths.gather(0).mul(sideLengths.gather(1));
+//     let loss = area.sub(desiredArea).pow(2);
+//     return loss;
+//   });
+// }
+// 
 
 function graph2neighbors(graph){
   let res = {};
@@ -715,11 +698,15 @@ function trainOneIter(dataObj, optimizer){
       if(coef.vertex_resolution > 0){
         let vr = vertex_resolution_loss(pdist);
         l = l.add(vr.mul(coef.vertex_resolution));
-        // l = l.add(vr.mul(0.1));
       }
-
-
-      
+      if(coef.aspect_ratio > 0){
+        let as = aspect_ratio_loss(x);
+        l = l.add(as.mul(coef.aspect_ratio));
+      }
+      if(coef.gabriel > 0){
+        let gb = gabriel_loss(x);
+        l = l.add(gb.mul(coef.gabriel));
+      }
       return l;
     });
     return loss;
@@ -918,6 +905,7 @@ function drawGraph(svg, graph){
     .call(
       d3.drag()
       .on('drag', (d)=>{
+        boundaries = undefined;
         let x = d3.event.sourceEvent.offsetX;
         let y = d3.event.sourceEvent.offsetY;
         let dx = d3.event.dx;
@@ -1004,7 +992,7 @@ window.onload = function(){
   let lrSlider = d3.select('#lr');
   window.lr = +Math.exp(lrSlider.node().value);
   let lrText = d3.select('#lrText')
-  .text(lr);
+  .text(lr.toFixed(4));
 
   let momentumSlider = d3.select('#momentum');
   window.momentum = +momentumSlider.node().value;
@@ -1027,10 +1015,15 @@ window.onload = function(){
   let vertexResolutionSlider = d3.select('#vertexResolutionSlider');
   let vertexResolutionLabel = d3.select('#vertexResolutionLabel');
 
-  let areaSlider = d3.select('#areaSlider');
-  let areaLabel = d3.select('#areaLabel');
-  let desiredAreaSlider = d3.select('#desiredAreaSlider');
-  let desiredAreaLabel = d3.select('#desiredAreaLabel');
+  let gabrielSlider = d3.select('#gabrielSlider');
+  let gabrielLabel = d3.select('#gabrielLabel');
+  let aspectRatioSlider = d3.select('#aspectRatioSlider');
+  let aspectRatioLabel = d3.select('#aspectRatioLabel');
+
+  // let areaSlider = d3.select('#areaSlider');
+  // let areaLabel = d3.select('#areaLabel');
+  // let desiredAreaSlider = d3.select('#desiredAreaSlider');
+  // let desiredAreaLabel = d3.select('#desiredAreaLabel');
 
 
   let coef = {
@@ -1041,7 +1034,9 @@ window.onload = function(){
     crossing_number: +crossingNumberSlider.node().value,
     angular_resolution: +angularResolutionSlider.node().value,
     vertex_resolution: +vertexResolutionSlider.node().value,
-    area: (areaSlider.node() !== null ? +areaSlider.node().value : 0.0),
+    gabriel: +gabrielSlider.node().value,
+    aspect_ratio: +aspectRatioSlider.node().value,
+    // area: (areaSlider.node() !== null ? +areaSlider.node().value : 0.0),
   };
 
   let sampleSize = 5;
@@ -1112,7 +1107,7 @@ window.onload = function(){
         edgePairs,
         neighbors,
         edges,
-        desiredArea: desiredAreaSlider.node()===null? 0.0: +desiredAreaSlider.node().value,
+        // desiredArea: desiredAreaSlider.node()===null? 0.0: +desiredAreaSlider.node().value,
       };
       window.dataObj = dataObj;
 
@@ -1169,7 +1164,7 @@ window.onload = function(){
       lrSlider.on('input', function(){
         window.lr = +d3.select(this).node().value;
         lr = Math.exp(lr);
-        lrText.text(lr);
+        lrText.text(lr.toFixed(4));
         optimizers[0] = tf.train.momentum(lr, momentum, false);
       });
 
@@ -1241,6 +1236,21 @@ window.onload = function(){
         coef['vertex_resolution'] = value;
       });
       vertexResolutionSlider.on('input')();
+
+      gabrielSlider.on('input', function(){
+        let value = +gabrielSlider.node().value;
+        gabrielLabel.text(value.toFixed(2));
+        coef['gabriel'] = value;
+      });
+      gabrielSlider.on('input')();
+
+      aspectRatioSlider.on('input', function(){
+        let value = +aspectRatioSlider.node().value;
+        aspectRatioLabel.text(value.toFixed(2));
+        coef['aspect_ratio'] = value;
+      });
+      aspectRatioSlider.on('input')();
+
 
 
     });

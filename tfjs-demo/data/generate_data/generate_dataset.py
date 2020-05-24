@@ -29,13 +29,15 @@ def block_graph(nc, cs):
 Gs = [
 ('cycle_graph_10', nx.cycle_graph(10)),
 ('grid_graph_5_5', nx.grid_graph(dim=[5,5])),
+('grid_graph_10_6', nx.grid_graph(dim=[10,6])),
 ('full_rary_tree', nx.full_rary_tree(2, 15)), 
 ('complete_graph_20', nx.complete_graph(20)), 
 ('complete_bipartite_graph_5_5', nx.complete_bipartite_graph(5, 5)),
 ('dodecahedral_graph', nx.dodecahedral_graph()), 
 ('hypercube_graph_3', nx.hypercube_graph(3)),
 ('block_graph_5_5', block_graph(5,5)),
-('input_9', build_networkx_graph('input9.txt')),]
+('input_9', build_networkx_graph('input9.txt')),
+]
 for name, G in Gs:
   print(name)
   networkx_to_json_2(G, name)
