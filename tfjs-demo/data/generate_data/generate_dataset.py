@@ -27,6 +27,8 @@ def block_graph(nc, cs):
 #   networkx_to_json(G)
 
 Gs = [
+('path-10', nx.path_graph(10)),
+('path-5', nx.path_graph(5)),
 ('cycle_graph_10', nx.cycle_graph(10)),
 ('grid_graph_5_5', nx.grid_graph(dim=[5,5])),
 ('grid_graph_10_6', nx.grid_graph(dim=[10,6])),

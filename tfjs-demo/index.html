@@ -55,12 +55,13 @@
         <label for='graphType'>Graph Type:</label>
         <select id="graphType" class="form-control" style='width: 250px;'>
           <option value="k-5">k-5</option>
+          <option value="path-5" selected>path-5</option>
           <option value="path-10">path-10</option>
           <option value="cycle-10" >cycle-10</option>
           <option value="tree-2-3" >tree-2-3</option>
           <option value="tree-2-4" >tree-2-4</option>
           <!-- <option value="tree-2-5">tree-2-5</option> -->
-          <option value="cube" selected>cube</option>
+          <option value="cube" >cube</option>
           <option value="dodecahedron">dodecahedron</option>
 
           <option value="input_9">input_9</option>
@@ -75,7 +76,7 @@
       <div class='form-group'>
         <form class="range-field my-4 w-100">
           <label for='stressSlider'>Stress <span id='stressLabel'></span></label>
-          <input id='stressSlider' class='custom-range' type="range" min=0 max=1 value=0.5 step=0.01>
+          <input id='stressSlider' class='custom-range' type="range" min=0 max=1 value=0.01 step=0.01>
           
           <label for='vertexResolutionSlider'>Vertex Resolution <span id='vertexResolutionLabel'></span></label>
           <input id='vertexResolutionSlider' class='custom-range' type="range" min=0 max=1 value=0.01 step=0.01>
@@ -96,7 +97,7 @@
           <input id='aspectRatioSlider' class='custom-range' type="range" min=0 max=1 value=0.0 step=0.01>
 
           <label for='gabrielSlider'>Gabriel <span id='gabrielLabel'></span></label>
-          <input id='gabrielSlider' class='custom-range' type="range" min=0 max=1 value=0.0 step=0.01>
+          <input id='gabrielSlider' class='custom-range' type="range" min=0 max=1 value=0.1 step=0.01>
 
 
           <label for='crossingNumberSlider'>Crossing Number <span id='crossingNumberLabel'></span></label>
@@ -112,7 +113,7 @@
           <input id='lr' class='custom-range' type="range" min="-6.9" max="-0.7985076962177716" value="-0.80" step="0.01">
 
           <label for='momentumText'>Momentum: <span id='momentumText'></span></label>
-          <input id='momentum' class='custom-range' type="range" min="0.0" max="0.99" value="0.5" step="0.01">
+          <input id='momentum' class='custom-range' type="range" min="0.0" max="0.95" value="0.5" step="0.01">
 
         </form>
       </div>
@@ -162,7 +163,8 @@ function edge_uniformity_loss(pdist, adj){
     .mul(adj)
     .square()
     .sum()
-    .div(N)
+    // .div(N)
+    .div(10)
     .sqrt();
   });
 }
@@ -504,12 +506,12 @@ function crossing_number_loss(x, edgePairs){
   let [edges1, edges2] = edgePairs;
 
   //stochastic
-  let samples = new Set(_.sample(d3.range(edges1.length), 10));
-  edges1 = edges1.filter((d,i)=>samples.has(i));
-  edges2 = edges2.filter((d,i)=>samples.has(i));
-  boundaries = tf.variable(
-    tf.randomUniform([edges1.length, 3, 1], -0.1, 0.1));
-  boundary_optim = tf.train.adam(boundary_lr);
+  // let samples = new Set(_.sample(d3.range(edges1.length), 10));
+  // edges1 = edges1.filter((d,i)=>samples.has(i));
+  // edges2 = edges2.filter((d,i)=>samples.has(i));
+  // boundaries = tf.variable(
+  //   tf.randomUniform([edges1.length, 3, 1], -0.1, 0.1));
+  // boundary_optim = tf.train.adam(boundary_lr);
 
 
   if(boundaries === undefined){
@@ -534,9 +536,8 @@ function crossing_number_loss(x, edgePairs){
       let loss1 = tf.relu(tf.scalar(1).sub(pred1.mul(1))).sum(); 
       let loss2 = tf.relu(tf.scalar(1).sub(pred2.mul(-1))).sum();
       let margin = boundaries.slice([0,0,0], [boundaries.shape[0], 2, 1]).norm(2,0).sum();
-      let loss = loss1.add(loss2).add(margin.mul(0.01));
+      let loss = loss1.add(loss2).add(margin.mul(0.05));
 
-      loss.print();
       return loss;
     }, true, [boundaries,]);
   }
@@ -558,13 +559,26 @@ function crossing_number_loss(x, edgePairs){
     let loss1 = tf.relu(tf.scalar(1).sub(pred1.mul(1))).sum(); 
     let loss2 = tf.relu(tf.scalar(1).sub(pred2.mul(-1))).sum();
     let loss = loss1.add(loss2);
-    return loss;
+    return loss.mul(0.01);
   });
 }
 
 
-function gabriel_loss(x){
+function gabriel_loss(x,adj, pdist){
+  return tf.tidy(()=>{
 
+    let x1 = x.broadcastTo([x.shape[0], ...x.shape]);
+    let centers = x1.add(x1.transpose([1,0,2])).div(2.0);
+    centers = centers.broadcastTo([x.shape[0], ...centers.shape]);
+    let dist = centers.sub(x.reshape([x.shape[0], 1, 1, x.shape[1]])).norm('euclidean', 3);
+    let radii = pdist.div(2.0);
+    let loss = dist.sub(radii).mul(-1).relu().pow(2);
+    let mask = adj;
+    loss = loss.mul(mask);
+    loss = loss.sum().div(2);
+    return loss;
+  });
+  
 }
 
 function rotations(n=10){
@@ -704,11 +718,14 @@ function trainOneIter(dataObj, optimizer){
         l = l.add(as.mul(coef.aspect_ratio));
       }
       if(coef.gabriel > 0){
-        let gb = gabriel_loss(x);
+        let gb = gabriel_loss(x, adj, pdist);
         l = l.add(gb.mul(coef.gabriel));
       }
-      return l;
+
+      let upperBound = 1e4;
+      return l.div(upperBound).tanh().mul(upperBound);
     });
+    
     return loss;
   }, true, [x]);
 }
@@ -721,6 +738,8 @@ function train(dataObj, remainingIter, optimizers, callback){
     window.playButton.on('click')(false);
   }else{
     let loss_i = trainOneIter(dataObj, optimizers[0]).dataSync()[0];
+    
+
     if (callback){
       callback({
         remainingIter,
@@ -922,7 +941,7 @@ function drawGraph(svg, graph){
 
     let newCircles = newNodes
     .append('circle')
-    .attr('r', 12)
+    .attr('r', 10)
     .attr('fill', d3.schemeCategory10[0]);
 
     let newTexts = newNodes
@@ -991,6 +1010,7 @@ window.onload = function(){
 
   let lrSlider = d3.select('#lr');
   window.lr = +Math.exp(lrSlider.node().value);
+  window.lrSlider = lrSlider;
   let lrText = d3.select('#lrText')
   .text(lr.toFixed(4));
 
@@ -1120,8 +1140,20 @@ window.onload = function(){
           }
           traceLoss(svg_loss, losses, maxPlotIter);
 
-          let y = tf.where(x.isNaN(), tf.zeros(x.shape), x);
-          updateNodePosition(graph, y.arraySync());
+          if (losses.length >= 10){
+            let n = losses.length;
+            let firstSlice = losses.slice(Math.floor(n/2), Math.floor(n/4*3));
+            let secondSlice = losses.slice(Math.floor(n/4*3), n);
+            let avgLoss0 = math.mean(firstSlice);
+            let avgLoss1 = math.mean(secondSlice);
+            if(avgLoss1 > avgLoss0){
+              lrSlider.on('input')(Math.max(lr/1.01, 0.001 ));
+            }
+          }
+          
+
+          // let y = tf.where(x.isNaN(), tf.zeros(x.shape), x);
+          updateNodePosition(graph, x.arraySync());
           drawGraph(svg_graph, graph);
         });
       }
@@ -1161,11 +1193,11 @@ window.onload = function(){
         loadGraph(fn);
       });
 
-      lrSlider.on('input', function(){
-        window.lr = +d3.select(this).node().value;
-        lr = Math.exp(lr);
+      lrSlider.on('input', function(value){
+        window.lr = value || Math.exp(+d3.select(this).node().value);
         lrText.text(lr.toFixed(4));
         optimizers[0] = tf.train.momentum(lr, momentum, false);
+        lrSlider.property('value', Math.log(lr));
       });
 
       momentumSlider.on('input', function(){
