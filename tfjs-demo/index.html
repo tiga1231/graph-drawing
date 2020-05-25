@@ -59,7 +59,7 @@
           <option value="path-10">path-10</option>
           <option value="cycle-10" >cycle-10</option>
           <option value="tree-2-3" >tree-2-3</option>
-          <option value="tree-2-4" >tree-2-4</option>
+          <option value="tree-2-4">tree-2-4</option>
           <!-- <option value="tree-2-5">tree-2-5</option> -->
           <option value="cube" >cube</option>
           <option value="dodecahedron">dodecahedron</option>
@@ -76,10 +76,10 @@
       <div class='form-group'>
         <form class="range-field my-4 w-100">
           <label for='stressSlider'>Stress <span id='stressLabel'></span></label>
-          <input id='stressSlider' class='custom-range' type="range" min=0 max=1 value=0.01 step=0.01>
+          <input id='stressSlider' class='custom-range' type="range" min=0 max=1 value=0.5 step=0.01>
           
           <label for='vertexResolutionSlider'>Vertex Resolution <span id='vertexResolutionLabel'></span></label>
-          <input id='vertexResolutionSlider' class='custom-range' type="range" min=0 max=1 value=0.01 step=0.01>
+          <input id='vertexResolutionSlider' class='custom-range' type="range" min=0 max=1 value=0.1 step=0.01>
 
           <label for='edgeUniformitySlider'>Edge Uniformity <span id='edgeUniformityLabel'></span></label>
           <input id='edgeUniformitySlider' class='custom-range' type="range" min=0 max=1 value=0.0 step=0.01>
@@ -91,13 +91,13 @@
           <input id='angleSlider' class='custom-range' type="range" min=0 max=1 value=0 step=0.01>
 
           <label for='angularResolutionSlider'>Angular Resolution <span id='angularResolutionLabel'></span></label>
-          <input id='angularResolutionSlider' class='custom-range' type="range" min=0 max=10 value=0 step=0.01>
+          <input id='angularResolutionSlider' class='custom-range' type="range" min=0 max=1 value=0.1 step=0.01>
 
           <label for='aspectRatioSlider'>Aspect Ratio <span id='aspectRatioLabel'></span></label>
           <input id='aspectRatioSlider' class='custom-range' type="range" min=0 max=1 value=0.0 step=0.01>
 
           <label for='gabrielSlider'>Gabriel <span id='gabrielLabel'></span></label>
-          <input id='gabrielSlider' class='custom-range' type="range" min=0 max=1 value=0.1 step=0.01>
+          <input id='gabrielSlider' class='custom-range' type="range" min=0 max=1 value=0.0 step=0.01>
 
 
           <label for='crossingNumberSlider'>Crossing Number <span id='crossingNumberLabel'></span></label>
@@ -187,10 +187,10 @@ function vertex_resolution_loss(pdist, resolution=0.1){
   });
 }
 
-function angular_resolution_loss(x, neighbors){
+function angular_resolution_loss0(x, neighbors){
   return tf.tidy(()=>{
-    let loss = tf.scalar(0.0);
     var nV = x.shape[0];
+    let losses = [];
     for(var i = 0; i<nV; i++){
       let n = neighbors[i].length;
       let v = x.gather(neighbors[i]).sub(x.gather(i));
@@ -200,7 +200,7 @@ function angular_resolution_loss(x, neighbors){
 
       // robjohn's answer at:
       // https://math.stackexchange.com/questions/1327253/how-do-we-find-out-angle-from-x-y-coordinates
-      let angle = tf.atan(ycoord.div(xcoord.add(norm))).mul(2).add(3.1415926).as1D();
+      let angle = tf.atan(ycoord.div(xcoord.add(norm))).mul(2).add(Math.PI).as1D();
 
       let angle_sorted = topk(angle, n);
       let angle_diff = angle_sorted
@@ -209,9 +209,40 @@ function angular_resolution_loss(x, neighbors){
       let last = tf.scalar(3.1415926*2).add(angle_sorted.gather(n-1).sub(angle_sorted.gather(0)));
       angle_diff = tf.concat([angle_diff, last.reshape([1])]);
       let energy = tf.exp(angle_diff.mul(-1)).sum();
-      loss = loss.add(energy);
+      losses.push(energy);
     }
+    let loss = tf.stack(losses).sum();
     return loss;
+  });
+}
+
+
+function angular_resolution_loss(x, adj){
+  return tf.tidy(()=>{
+    x.print();
+    let n = x.shape[0];
+    let targetNodes = x.broadcastTo([x.shape[0], ...x.shape]);
+    let sourceNodes = x.reshape([x.shape[0], 1, x.shape[1]])
+    let v = targetNodes.sub(sourceNodes);//[n,n,2]
+
+    let xcoord = v.slice([0,0,0], [v.shape[0],v.shape[1],1]);
+    let ycoord = v.slice([0,0,1], [v.shape[0],v.shape[1],1]);
+    let norm = v.norm('euclidean', 2, true);
+    norm.print();
+    let angle = tf.atan(ycoord.div(xcoord.add(norm))).mul(2).add(Math.PI);
+    angle = angle.reshape([angle.shape[0],angle.shape[1]]);
+    angle = angle.mul(adj);
+    angle = sort(angle);
+    console.log(angle.shape);
+    // console.log('angle');
+    // let angle_diff = angle
+    //     .slice([0], [angle.shape[0]-1])
+    //     .sub(angle.slice([1], [angle.shape[0]-1]));
+    // angle_diff.print();
+    // let energy = tf.exp(angle_diff.abs().mul(-1)).mean().mul(0);
+    // energy.print();
+    // return tf.scalar(0.0);
+    return angle.mean();
   });
 }
 
@@ -323,6 +354,25 @@ function topk(x, k){
   return x.flatten()
           .gather(indices)
           .reshape(shape);
+}
+
+function sort(x){
+  //sort each row of a matrix x independently, remove non-positives
+  const nrows = x.shape[0];
+  const nentries = x.shape[1];
+  const data = x.arraySync();
+  const indices = d3.range(nentries);
+
+  let final_indices = [];
+  for(let i=0; i<nrows; i++){
+    let row = data[i];
+    let pairs = zip(indices, row);
+    let pairs_sorted = pairs.sort((a,b)=>b[1]-a[1]);
+    let indices_sorted = pairs_sorted.filter(d=>d[1]>0).map(d=>i*nrows + d[0]);
+    final_indices = final_indices.concat(indices_sorted);
+  }
+  return x.flatten()
+          .gather(final_indices);
 }
 
 
@@ -702,7 +752,8 @@ function trainOneIter(dataObj, optimizer){
         l = l.add(cs.mul(coef.crossing_number));
       }
       if(coef.angular_resolution > 0){
-        let ar = angular_resolution_loss(x, dataObj.neighbors);
+        let ar = angular_resolution_loss0(x, dataObj.neighbors);
+        // let ar = angular_resolution_loss(x, adj);
         l = l.add(ar.mul(coef.angular_resolution));
       }
       if(coef.area > 0){
