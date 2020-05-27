@@ -55,10 +55,10 @@
         <label for='graphType'>Graph Type:</label>
         <select id="graphType" class="form-control" style='width: 250px;'>
           <option value="k-5">k-5</option>
-          <option value="path-5" selected>path-5</option>
+          <option value="path-5" >path-5</option>
           <option value="path-10">path-10</option>
           <option value="cycle-10" >cycle-10</option>
-          <option value="tree-2-3" >tree-2-3</option>
+          <option value="tree-2-3" selected>tree-2-3</option>
           <option value="tree-2-4">tree-2-4</option>
           <!-- <option value="tree-2-5">tree-2-5</option> -->
           <option value="cube" >cube</option>
@@ -79,7 +79,7 @@
           <input id='stressSlider' class='custom-range' type="range" min=0 max=1 value=0.5 step=0.01>
           
           <label for='vertexResolutionSlider'>Vertex Resolution <span id='vertexResolutionLabel'></span></label>
-          <input id='vertexResolutionSlider' class='custom-range' type="range" min=0 max=1 value=0.1 step=0.01>
+          <input id='vertexResolutionSlider' class='custom-range' type="range" min=0 max=1 value=0.0 step=0.01>
 
           <label for='edgeUniformitySlider'>Edge Uniformity <span id='edgeUniformityLabel'></span></label>
           <input id='edgeUniformitySlider' class='custom-range' type="range" min=0 max=1 value=0.0 step=0.01>
@@ -91,7 +91,7 @@
           <input id='angleSlider' class='custom-range' type="range" min=0 max=1 value=0 step=0.01>
 
           <label for='angularResolutionSlider'>Angular Resolution <span id='angularResolutionLabel'></span></label>
-          <input id='angularResolutionSlider' class='custom-range' type="range" min=0 max=1 value=0.1 step=0.01>
+          <input id='angularResolutionSlider' class='custom-range' type="range" min=0 max=1 value=0.0 step=0.01>
 
           <label for='aspectRatioSlider'>Aspect Ratio <span id='aspectRatioLabel'></span></label>
           <input id='aspectRatioSlider' class='custom-range' type="range" min=0 max=1 value=0.0 step=0.01>
@@ -103,10 +103,11 @@
           <label for='crossingNumberSlider'>Crossing Number <span id='crossingNumberLabel'></span></label>
           <input id='crossingNumberSlider' class='custom-range' type="range" min=0 max=1 value=0.0 step=0.01>
           
-          <!-- <label for='desiredAreaSlider'>Desired Area <span id='desiredAreaLabel'></span></label>
-          <input id='desiredAreaSlider' class='custom-range' type="range" min=0.1 max=20 value=1.0 step=0.01>
-          <label for='areaSlider'>Weights <span id='areaLabel'></span></label>
-          <input id='areaSlider' class='custom-range' type="range" min=0 max=1 value=0.0 step=0.01> -->
+          <hr>
+          <label for='desiredAreaSlider'>Area <span id='desiredAreaLabel'></span></label>
+          <input id='desiredAreaSlider' class='custom-range' type="range" min=0.1 max=20 value=6.0 step=0.01>
+          <label for='areaSlider'>Coefficient <span id='areaLabel'></span></label>
+          <input id='areaSlider' class='custom-range' type="range" min=0 max=1 value=0.05 step=0.01>
 
           <hr>
           <label for='lrText'>Learning Rate: <span id='lrText'></span></label>
@@ -180,8 +181,7 @@ function vertex_resolution_loss(pdist, resolution=0.1){
     // let loss = r.pow(2).mul( tf.scalar(3).sub(r.mul(2)) );//smoothstep: r^2 * (3-2r)
 
     let r = pdist_normalized.sub(resolution).div(-resolution).relu();
-    // let loss = tf.scalar(1.0).sub(tf.scalar(1.001).sub(r.pow(2)));
-    let loss = r.pow(2);
+    let loss = tf.scalar(1.0).sub(tf.scalar(1.001).sub(r.pow(2)));
 
     loss = loss.mul(mask).sum().mul(0.02);
     return loss;
@@ -673,29 +673,29 @@ function aspect_ratio_loss(x){
   });
 }
 
-// function area_loss(x, pdist, edges, desiredArea){
-//   if(desiredArea===undefined){
-//     // desiredArea = Math.sqrt(edges.length) / 4;
-//     desiredArea = 2;
-//     // desiredArea = pdist.max();
-//     console.log(desiredArea);
-//   }
-//   let minEdgeLength = math.min(pdist.arraySync().flat().filter(d=>d>0.001));
-//   return tf.tidy(()=>{
-//     let scale = Math.max(2.0, minEdgeLength);
-//     let min = x.min(0);
-//     let max = x.max(0);
+function area_loss(x, pdist, edges, desiredArea){
+  if(desiredArea===undefined){
+    // desiredArea = Math.sqrt(edges.length) / 4;
+    desiredArea = 2;
+    // desiredArea = pdist.max();
+    console.log(desiredArea);
+  }
+  let minEdgeLength = math.min(pdist.arraySync().flat().filter(d=>d>0.001));
+  return tf.tidy(()=>{
+    let scale = Math.max(2.0, minEdgeLength);
+    let min = x.min(0);
+    let max = x.max(0);
 
-//     // min = tf.scalar(1.0).div(x.sub(min).add(0.01)).mul(x).mean(0);
-//     // max = tf.scalar(1.0).div(max.sub(x).add(0.01)).mul(x).mean(0);
+    // min = tf.scalar(1.0).div(x.sub(min).add(0.01)).mul(x).mean(0);
+    // max = tf.scalar(1.0).div(max.sub(x).add(0.01)).mul(x).mean(0);
     
-//     let sideLengths = max.sub(min).div(scale);
-//     let area = sideLengths.gather(0).mul(sideLengths.gather(1));
-//     let loss = area.sub(desiredArea).pow(2);
-//     return loss;
-//   });
-// }
-// 
+    let sideLengths = max.sub(min).div(scale);
+    let area = sideLengths.gather(0).mul(sideLengths.gather(1));
+    let loss = area.sub(desiredArea).pow(2);
+    return loss;
+  });
+}
+
 
 function graph2neighbors(graph){
   let res = {};
@@ -1092,10 +1092,10 @@ window.onload = function(){
   let aspectRatioSlider = d3.select('#aspectRatioSlider');
   let aspectRatioLabel = d3.select('#aspectRatioLabel');
 
-  // let areaSlider = d3.select('#areaSlider');
-  // let areaLabel = d3.select('#areaLabel');
-  // let desiredAreaSlider = d3.select('#desiredAreaSlider');
-  // let desiredAreaLabel = d3.select('#desiredAreaLabel');
+  let areaSlider = d3.select('#areaSlider');
+  let areaLabel = d3.select('#areaLabel');
+  let desiredAreaSlider = d3.select('#desiredAreaSlider');
+  let desiredAreaLabel = d3.select('#desiredAreaLabel');
 
 
   let coef = {
@@ -1179,7 +1179,7 @@ window.onload = function(){
         edgePairs,
         neighbors,
         edges,
-        // desiredArea: desiredAreaSlider.node()===null? 0.0: +desiredAreaSlider.node().value,
+        desiredArea: desiredAreaSlider.node()===null? 0.0: +desiredAreaSlider.node().value,
       };
       window.dataObj = dataObj;
 
@@ -1300,18 +1300,18 @@ window.onload = function(){
       });
       angularResolutionSlider.on('input')();
 
-      // areaSlider.on('input', function(){
-      //   let value = +areaSlider.node().value;
-      //   areaLabel.text(value.toFixed(2));
-      //   coef['area'] = value;
-      // });
-      // areaSlider.on('input')();
-      // desiredAreaSlider.on('input', function(){
-      //   let value = +desiredAreaSlider.node().value;
-      //   desiredAreaLabel.text(value.toFixed(2));
-      //   dataObj['desiredArea'] = value;
-      // });
-      // desiredAreaSlider.on('input')();
+      areaSlider.on('input', function(){
+        let value = +areaSlider.node().value;
+        areaLabel.text(value.toFixed(2));
+        coef['area'] = value;
+      });
+      areaSlider.on('input')();
+      desiredAreaSlider.on('input', function(){
+        let value = +desiredAreaSlider.node().value;
+        desiredAreaLabel.text(value.toFixed(2));
+        dataObj['desiredArea'] = value;
+      });
+      desiredAreaSlider.on('input')();
 
 
       vertexResolutionSlider.on('input', function(){
