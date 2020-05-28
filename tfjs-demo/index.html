@@ -58,8 +58,8 @@
         <label for='graphType'>Graph Type:</label>
         <select id="graphType" class="form-control" style='width: 250px;'>
           <option value="k-5">k-5</option>
-          <option value="path-5" selected>path-5</option>
-          <option value="path-10">path-10</option>
+          <option value="path-5" >path-5</option>
+          <option value="path-10" selected>path-10</option>
           <option value="cycle-10" >cycle-10</option>
           <option value="tree-2-3" >tree-2-3</option>
           <option value="tree-2-4">tree-2-4</option>
@@ -78,45 +78,73 @@
 
       <div class='form-group'>
         <form class="range-field my-4 w-100">
-          <label for='stressSlider'>Stress <span id='stressLabel'></span></label>
-          <input id='stressSlider' class='custom-range' type="range" min=0 max=1 value=0.0 step=0.01>
+
+          <div class='sliderContainer'>
+            <svg class='metric' for='stress'></svg>
+            <label for='stressSlider'>Stress <span id='stressLabel'></span></label><br>
+            <input id='stressSlider' class='custom-range' type="range" min=0 max=1 value=0.5 step=0.01>
+          </div>
+
+          <div class='sliderContainer'>
+            <svg class='metric' for='vertex_resolution'></svg>
+            <label for='vertexResolutionSlider'>Vertex Resolution <span id='vertexResolutionLabel'></span></label><br>
+            <input id='vertexResolutionSlider' class='custom-range' type="range" min=0 max=1 value=0.0 step=0.01>
+          </div>
+
+          <div class='sliderContainer'>
+            <svg class='metric' for='edge_uniformity'></svg>          
+            <label for='edgeUniformitySlider'>Edge Uniformity <span id='edgeUniformityLabel'></span></label><br>
+            <input id='edgeUniformitySlider' class='custom-range' type="range" min=0 max=1 value=0.0 step=0.01>
+          </div>
           
-          <label for='vertexResolutionSlider'>Vertex Resolution <span id='vertexResolutionLabel'></span></label>
-          <input id='vertexResolutionSlider' class='custom-range' type="range" min=0 max=1 value=0.0 step=0.01>
-
-          <label for='edgeUniformitySlider'>Edge Uniformity <span id='edgeUniformityLabel'></span></label>
-          <input id='edgeUniformitySlider' class='custom-range' type="range" min=0 max=1 value=0.0 step=0.01>
-
-          <label for='neighborSlider'>Neighborhood Preservation <span id='neighborLabel'></span></label>
-          <input id='neighborSlider' class='custom-range' type="range" min=0 max=1 value=0.0 step=0.01>
-
-          <label for='crossingAngleSlider'>Crossing Angle <span id='crossingAngleLabel'></span></label>
-          <input id='crossingAngleSlider' class='custom-range' type="range" min=0 max=1 value=0 step=0.01>
-
-          <label for='angularResolutionSlider'>Angular Resolution <span id='angularResolutionLabel'></span></label>
-          <input id='angularResolutionSlider' class='custom-range' type="range" min=0 max=1 value=0.0 step=0.01>
-
-          <label for='aspectRatioSlider'>Aspect Ratio <span id='aspectRatioLabel'></span></label>
-          <input id='aspectRatioSlider' class='custom-range' type="range" min=0 max=1 value=0.0 step=0.01>
-
-          <label for='gabrielSlider'>Gabriel <span id='gabrielLabel'></span></label>
-          <input id='gabrielSlider' class='custom-range' type="range" min=0 max=1 value=0.0 step=0.01>
-
-
-          <label for='crossingNumberSlider'>Crossing Number <span id='crossingNumberLabel'></span></label>
-          <input id='crossingNumberSlider' class='custom-range' type="range" min=0 max=1 value=0.0 step=0.01>
+          <div class='sliderContainer'>
+            <svg class='metric' for='neighbor'></svg>
+            <label for='neighborSlider'>Neighborhood Preservation <span id='neighborLabel'></span></label><br>
+            <input id='neighborSlider' class='custom-range' type="range" min=0 max=1 value=0.0 step=0.01>
+          </div>
           
-          <!-- <label for='desiredAreaSlider'>Desired Area <span id='desiredAreaLabel'></span></label>
-          <input id='desiredAreaSlider' class='custom-range' type="range" min=0.1 max=20 value=1.0 step=0.01>
-          <label for='areaSlider'>Weights <span id='areaLabel'></span></label>
-          <input id='areaSlider' class='custom-range' type="range" min=0 max=1 value=0.0 step=0.01> -->
+          <div class='sliderContainer'>
+            <svg class='metric' for='crossing_angle'></svg>
+            <label for='crossingAngleSlider'>Crossing Angle <span id='crossingAngleLabel'></span></label><br>
+            <input id='crossingAngleSlider' class='custom-range' type="range" min=0 max=1 value=0 step=0.01>
+          </div>
+          
+          <div class='sliderContainer'>
+            <svg class='metric' for='angular_resolution'></svg>
+            <label for='angularResolutionSlider'>Angular Resolution <span id='angularResolutionLabel'></span></label><br>
+            <input id='angularResolutionSlider' class='custom-range' type="range" min=0 max=1 value=0.0 step=0.01>
+          </div>
+          
+          <div class='sliderContainer'>
+            <svg class='metric' for='aspect_ratio'></svg>
+            <label for='aspectRatioSlider'>Aspect Ratio <span id='aspectRatioLabel'></span></label><br>
+            <input id='aspectRatioSlider' class='custom-range' type="range" min=0 max=1 value=0.0 step=0.01>
+          </div>
+          
+          <div class='sliderContainer'>
+            <svg class='metric' for='gabriel'></svg>
+            <label for='gabrielSlider'>Gabriel <span id='gabrielLabel'></span></label><br>
+            <input id='gabrielSlider' class='custom-range' type="range" min=0 max=1 value=0.0 step=0.01>
 
-          <hr>
-          <label for='lrText'>Learning Rate: <span id='lrText'></span></label>
-          <input id='lr' class='custom-range' type="range" min="-6.9" max="-0.7985076962177716" value="-0.80" step="0.01">
+          </div>
+          
+          <div class='sliderContainer'>
+            <svg class='metric' for='crossing_number'></svg>
+            <label for='crossingNumberSlider'>Crossing Number <span id='crossingNumberLabel'></span></label><br>
+            <input id='crossingNumberSlider' class='custom-range' type="range" min=0 max=1 value=0.0 step=0.01>
+          </div>
+          
+            <!-- <label for='desiredAreaSlider'>Desired Area <span id='desiredAreaLabel'></span></label>
+            <input id='desiredAreaSlider' class='custom-range' type="range" min=0.1 max=20 value=1.0 step=0.01>
+            <label for='areaSlider'>Weights <span id='areaLabel'></span></label>
+            <input id='areaSlider' class='custom-range' type="range" min=0 max=1 value=0.0 step=0.01> -->
 
-          <label for='momentumText'>Momentum: <span id='momentumText'></span></label>
-          <input id='momentum' class='custom-range' type="range" min="0.0" max="0.95" value="0.5" step="0.01">
+            <hr>
+            <label for='lrText'>Learning Rate: <span id='lrText'></span></label><br>
+            <input id='lr' class='custom-range' type="range" min="-6.9" max="-0.7985076962177716" value="-0.80" step="0.01">
+
+            <label for='momentumText'>Momentum: <span id='momentumText'></span></label><br>
+            <input id='momentum' class='custom-range' type="range" min="0.0" max="0.95" value="0.5" step="0.01">
 
         </form>
       </div>

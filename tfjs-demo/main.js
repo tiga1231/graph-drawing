@@ -19,7 +19,8 @@ function pairwise_distance(x){
 function stress_loss(pred, target, weight){
   return tf.tidy(()=>{
     let stress = pred.sub(target).square().mul(weight).sum().div(4);
-    return [stress, stress.mul(-1).add(1.0)];
+    let metric = stress.mul(-1).add(1.0).dataSync()[0];
+    return [stress, metric];
   });
 }
 
@@ -49,7 +50,7 @@ function edge_uniformity_loss(pdist, adj){
     .mul(-1)
     .add(1.0);
 
-    return [loss, metric];
+    return [loss, metric.dataSync()[0]];
   });
 }
 
@@ -68,14 +69,47 @@ function vertex_resolution_loss(pdist, resolution=0.1){
     let loss = r.pow(2);
 
     loss = loss.mul(mask).sum().mul(0.02);
-    return loss;
+    let metric = 1.0 - r.mul(mask).max().dataSync()[0];
+    return [loss, metric];
   });
 }
 
-function angular_resolution_loss0(x, neighbors){
+function angular_resolution_metric(x, neighbors){
+  x = x.arraySync();
+  let n = x.length;
+  let metric_min = Infinity;
+  for(let i=0; i<n; i++){
+    let center_node = x[i];
+    let neighbor_nodes = neighbors[i].map(k=>x[k]);
+    let v = neighbor_nodes.map(d=>numeric.sub(d, center_node));
+
+    // https://math.stackexchange.com/questions/1327253/how-do-we-find-out-angle-from-x-y-coordinates
+    let angles = v.map(d=>{
+      let [x,y] = d;
+      return 2*Math.atan(y/(x+Math.sqrt(x*x+y*y))) + Math.PI;
+    });
+    angles.sort();
+    let ang1 = angles.slice(1);
+    let ang0 = angles.slice(0, angles.length-1);
+    let ang_diff = numeric.sub(ang1, ang0);
+    let last_diff = Math.PI*2 - (angles[angles.length-1] - angles[0]);
+    ang_diff.push(last_diff);
+
+    let target = Math.PI*2 / neighbor_nodes.length;
+    let metric_i = math.min(ang_diff) / target;
+    if(metric_i < metric_min){
+      metric_min = metric_i;
+    }
+  }
+  let metric = metric_min;
+  return metric;
+}
+
+function angular_resolution_loss(x, neighbors){
   return tf.tidy(()=>{
     var nV = x.shape[0];
     let losses = [];
+    let metric_min = [];//for metric
     for(var i = 0; i<nV; i++){
       let n = neighbors[i].length;
       let v = x.gather(neighbors[i]).sub(x.gather(i));
@@ -95,14 +129,18 @@ function angular_resolution_loss0(x, neighbors){
       angle_diff = tf.concat([angle_diff, last.reshape([1])]);
       let energy = tf.exp(angle_diff.mul(-1)).sum();
       losses.push(energy);
+
+      // metric_min.push( angle_diff.min().dataSync()[0] / (2*Math.PI / n));
     }
     let loss = tf.stack(losses).sum();
+    // let metric = math.min(metric_min);
+    // return [loss, metric];
     return loss;
   });
 }
 
 
-function angular_resolution_loss(x, adj){
+function angular_resolution_loss1(x, adj){
   return tf.tidy(()=>{
     x.print();
     let n = x.shape[0];
@@ -118,7 +156,6 @@ function angular_resolution_loss(x, adj){
     angle = angle.reshape([angle.shape[0],angle.shape[1]]);
     angle = angle.mul(adj);
     angle = sort(angle);
-    console.log(angle.shape);
     // console.log('angle');
     // let angle_diff = angle
     //     .slice([0], [angle.shape[0]-1])
@@ -184,9 +221,8 @@ function cosSimilarity(x, y){
 }
 
 
-function crossing_angle_loss(x, graph, sampleSize=1){
+function graph2crossings(graph){
   let crossings = [];
-
   for (let e1 of graph.edges){
     for (let e2 of graph.edges){
       let i = e1.source.index;
@@ -200,12 +236,47 @@ function crossing_angle_loss(x, graph, sampleSize=1){
       }
     }
   }
+  return crossings;
+}
 
-  sampleSize = crossings.length;
-  // // let sampleSize = Math.min(5, Math.ceil(crossings.length)/2);
+function crossing_angle_metric(x, graph){
+  let crossings = graph2crossings(graph);
+  if(crossings.length>0){
+    //metric
+    let x_data = x.arraySync();
+    let p1 = crossings.map(d=>x_data[d[0][0]]);
+    let p2 = crossings.map(d=>x_data[d[0][1]]);
+    let p3 = crossings.map(d=>x_data[d[1][0]]);
+    let p4 = crossings.map(d=>x_data[d[1][1]]);
+    let e1 = numeric.sub(p1, p2);
+    let e2 = numeric.sub(p3, p4);
+    let cos = zip(e1, e2).map((d)=>{
+      let e1 = d[0];
+      let e2 = d[1];
+      let cos = numeric.dot(e1, e2) / (numeric.norm2(e1) * numeric.norm2(e2));
+      return cos;
+    })
+    let angle_normed = cos.map(c=>{
+      return Math.abs(Math.acos(c) - Math.PI/2) / Math.PI/2;
+    });
+    let metric = 1 - math.min(angle_normed);
+    return metric;
+  }else{
+    return 1.0;
+  }
+}
+
+
+function crossing_angle_loss(x, graph, sampleSize=1){
+  let crossings = graph2crossings(graph);
+
+  sampleSize = Math.min(5, Math.ceil(crossings.length)/2);
   let sampledCrossings = _.sample(crossings, sampleSize);
+  // sampledCrossings = crossings;
+
   if(sampledCrossings.length > 0){
-    return tf.tidy(()=>{
+
+    let loss = tf.tidy(()=>{
       let p1 = x.gather( sampledCrossings.map(d=>d[0][0]) );
       let p2 = x.gather( sampledCrossings.map(d=>d[0][1]) );
       let p3 = x.gather( sampledCrossings.map(d=>d[1][0]) );
@@ -213,12 +284,36 @@ function crossing_angle_loss(x, graph, sampleSize=1){
       let e1 = p2.sub(p1);
       let e2 = p4.sub(p3);
       let cos = cosSimilarity(e1, e2);
-      return [cos.square().mean(), tf.scalar(1.0).sub(cos.acos().min().sub(Math.PI/2).abs().div(Math.PI/2))];
+      let loss = cos.square().mean();
+      return loss;
     });
+
+    //metric
+    let x_data = x.arraySync();
+    let p1 = crossings.map(d=>x_data[d[0][0]]);
+    let p2 = crossings.map(d=>x_data[d[0][1]]);
+    let p3 = crossings.map(d=>x_data[d[1][0]]);
+    let p4 = crossings.map(d=>x_data[d[1][1]]);
+    let e1 = numeric.sub(p1, p2);
+    let e2 = numeric.sub(p3, p4);
+    let cos = zip(e1, e2).map((d)=>{
+      let e1 = d[0];
+      let e2 = d[1];
+      let cos = numeric.dot(e1, e2) / (numeric.norm2(e1) * numeric.norm2(e2));
+      return cos;
+    })
+    //tf.scalar(1.0).sub(   cos.acos().min().sub(Math.PI/2).abs().div(Math.PI/2)  );
+    let angle_normed = cos.map(c=>{
+      return Math.abs(Math.acos(c) - Math.PI/2) / Math.PI/2;
+    });
+    let metric = 1 - math.min(angle_normed);
+
+    return [loss, metric];
   }else{
-    return [tf.scalar(0.0), tf.scalar(0.0)];
+    return [tf.scalar(0.0), 1.0];
   }
 }
+
 
 // https://github.com/tensorflow/tfjs/issues/1601
 function topk(x, k){
@@ -498,24 +593,37 @@ function crossing_number_loss(x, edgePairs){
     let loss1 = tf.relu(tf.scalar(1).sub(pred1.mul(1))).sum(); 
     let loss2 = tf.relu(tf.scalar(1).sub(pred2.mul(-1))).sum();
     let loss = loss1.add(loss2);
-    return loss.mul(0.01);
+
+    //metric:
+    let n = x.shape[0];
+    let max_crossings = n*(n-1)*(n-2)*(n-3) / (4*3*2);
+    let crossings = graph2crossings(graph);
+    let metric = 1 - crossings.length / max_crossings;
+
+    return [loss.mul(0.01), metric];
   });
 }
 
 
-function gabriel_loss(x,adj, pdist){
+function gabriel_loss(x, adj, pdist){
   return tf.tidy(()=>{
 
     let x1 = x.broadcastTo([x.shape[0], ...x.shape]);
     let centers = x1.add(x1.transpose([1,0,2])).div(2.0);
     centers = centers.broadcastTo([x.shape[0], ...centers.shape]);
-    let dist = centers.sub(x.reshape([x.shape[0], 1, 1, x.shape[1]])).norm('euclidean', 3);
-    let radii = pdist.div(2.0);
+    let dist = centers.sub(x.reshape([x.shape[0], 1, 1, x.shape[1]])).norm('euclidean', 3);//[x, e1, e2]
+
+    let radii = pdist.div(2.0);//[e1, e2]
+
     let loss = dist.sub(radii).mul(-1).relu().pow(2);
     let mask = adj;
     loss = loss.mul(mask);
     loss = loss.sum().div(2);
-    return loss;
+
+    let metric = tf.scalar(1.0).sub(  dist.sub(radii).mul(-1).relu().div(radii.add(0.001)) );
+    metric = metric.mul(mask).add(tf.scalar(1.0).sub(mask).mul(1e2)).min();
+
+    return [loss, metric.dataSync()[0]];
   });
   
 }
@@ -554,10 +662,23 @@ function aspect_ratio_loss(x){
     let minWeight = softmax(x.mul(-1), [0,2], 0.1);
     let max = x.mul(maxWeight).sum(1);
     let min = x.mul(minWeight).sum(1);
-    let size = max.sub(min).add(1); // add 1 for stability on cube & path-10;
+    let size = max.sub(min).add(0.3); // add a small constant for stability on cube & path-10;
     let prob = size.div(size.sum(1, true)); //n two-category probabilities;
     let cross_entropy = prob.log().sum().div(n).mul(-0.5); //cross entropy loss against uniform distribution={0.5, 0.5}
-    return cross_entropy.mul(500.0);
+    let loss = cross_entropy.mul(500.0);
+
+    let max_for_metric = x.max(1);//shape=[7,2]
+    let min_for_metric = x.min(1);
+    let size_for_metric = max_for_metric.sub(min_for_metric);
+    let width_for_metric = size_for_metric.slice([0,0],[n,1]);
+    let height_for_metric = size_for_metric.slice([0,1],[n,1]);
+    let ratio_for_metric = tf.concat([
+      width_for_metric.div(height_for_metric),
+      height_for_metric.div(width_for_metric),
+    ]);
+    let metric = ratio_for_metric.min().dataSync()[0];
+
+    return [loss, metric];
   });
 }
 
@@ -604,8 +725,17 @@ function graph2neighbors(graph){
 }
 
 
-function trainOneIter(dataObj, optimizer){
+function crossing_number_metric(x, graph){
+  let n = x.shape[0];
+  let max_crossings = n*(n-1)*(n-2)*(n-3) / (4*3*2);
+  let crossings = graph2crossings(graph);
+  let metric = 1 - crossings.length / max_crossings;
+  return metric;
+}
+
+function trainOneIter(dataObj, optimizer, computeMetric=true){
   let x = dataObj.x;
+  let x_array = x.arraySync();
   let graphDistance = dataObj.graphDistance;
   let stressWeight = dataObj.stressWeight
   let graph = dataObj.graph;
@@ -617,68 +747,115 @@ function trainOneIter(dataObj, optimizer){
     let pdist = pairwise_distance(x);
     let loss = tf.tidy(()=>{
       let l = center_loss(x);
-      if(coef.stress > 0){
-        let [st, metric] = stress_loss(pdist, graphDistance, stressWeight);
-        l = l.add(st.mul(coef.stress));
-        metrics.stress = metric.dataSync()[0];
-      }else{
-        // let st = stress_loss(pdist, graphDistance, stressWeight);
-        // metrics.stress = -st.dataSync()[0];
+      
+      if(coef.stress > 0 || computeMetric){
+        let [st, m_st] = stress_loss(pdist, graphDistance, stressWeight);
+        metrics.stress = m_st;
+        if(coef.stress > 0){
+          l = l.add(st.mul(coef.stress));
+        }
       }
 
+      //commented for debug only
+      
       if(coef.crossing_angle > 0){
-        let [an, metric] = crossing_angle_loss(x, graph, dataObj.sampleSize || 1);
+        let [an, m_an] = crossing_angle_loss(x, graph, dataObj.sampleSize || 1);
+        metrics.crossing_angle = m_an;
         l = l.add(an.mul(coef.crossing_angle));
-        metrics.angle = metric.dataSync()[0];
+      }else{
+        let m_an = crossing_angle_metric(x, graph);
+        metrics.crossing_angle = m_an;
       }
 
+
+      
       if (coef.neighbor > 0){
-        // let nb = neighbor_loss(pdist, adj, n_neighbors, 1000);
         let [thresh, scale, margin] = computeThreshScaleMargin(pdist.arraySync(), n_neighbors);
-        let [nb, metric] = neighbor_loss(pdist, adj, thresh, scale, margin);
-        l = l.add(nb.mul(coef.neighbor));
-        metrics.neighbor = metric;
+        let [nb, m_nb] = neighbor_loss(pdist, adj, thresh, scale, margin);
+        metrics.neighbor = m_nb;
+        if (coef.neighbor > 0){
+          l = l.add(nb.mul(coef.neighbor));
+        }
+      }else if (computeMetric){
+        let [thresh, scale, margin] = computeThreshScaleMargin(pdist.arraySync(), n_neighbors);
+        let truth = adj;
+        let mask = tf.scalar(1.0).sub(tf.eye(pdist.shape[0]));
+        let pred = pdist.sub(thresh).mul(-1).mul(adj);
+        let m_nb = jaccardIndex(pred.arraySync(), truth.arraySync());
+        metrics.neighbor = m_nb;
       }
 
-      if(coef.edge_uniformity > 0){
-        let [eu, metric] = edge_uniformity_loss(pdist, adj);
-        l = l.add(eu.mul(coef.edge_uniformity));
-        metrics.edge_uniformity = metric.dataSync()[0];
+      
+      if(coef.edge_uniformity > 0 || computeMetric){
+        let [eu, m_eu] = edge_uniformity_loss(pdist, adj);
+        metrics.edge_uniformity = m_eu;
+        if(coef.edge_uniformity > 0){
+          l = l.add(eu.mul(coef.edge_uniformity));
+        }
       }
 
+      
       if (coef.crossing_number > 0){
-        let cs = crossing_number_loss(x, dataObj.edgePairs);
-        l = l.add(cs.mul(coef.crossing_number));
-      }
-      if(coef.angular_resolution > 0){
-        let ar = angular_resolution_loss0(x, dataObj.neighbors);
-        // let ar = angular_resolution_loss(x, adj);
-        l = l.add(ar.mul(coef.angular_resolution));
-      }
-      if(coef.area > 0){
-        let al = area_loss(x, pdist, dataObj.edges, dataObj.desiredArea);
-        l = l.add(al.mul(coef.area));
-      }
-      if(coef.vertex_resolution > 0){
-        let vr = vertex_resolution_loss(pdist);
-        l = l.add(vr.mul(coef.vertex_resolution));
-      }
-      if(coef.aspect_ratio > 0){
-        let as = aspect_ratio_loss(x);
-        l = l.add(as.mul(coef.aspect_ratio));
-      }
-      if(coef.gabriel > 0){
-        let gb = gabriel_loss(x, adj, pdist);
-        l = l.add(gb.mul(coef.gabriel));
+        let [cs, m_cs] = crossing_number_loss(x, dataObj.edgePairs);
+        metrics.crossing_number = m_cs;
+        if (coef.crossing_number > 0){
+          l = l.add(cs.mul(coef.crossing_number));
+        }
+      }else if(computeMetric){
+        let m_cs = crossing_number_metric(x, graph);
+        metrics.crossing_number = m_cs;
       }
 
+
+      if(coef.angular_resolution > 0 || computeMetric){
+        let m_ar = angular_resolution_metric(x, dataObj.neighbors);
+        metrics.angular_resolution = m_ar;
+
+        if(coef.angular_resolution > 0){
+          let ar = angular_resolution_loss(x, dataObj.neighbors);
+          l = l.add(ar.mul(coef.angular_resolution));
+        }
+      }
+
+      
+      if(coef.vertex_resolution > 0 || computeMetric){
+        let [vr, m_vr] = vertex_resolution_loss(pdist);
+        metrics.vertex_resolution = m_vr;
+        if(coef.vertex_resolution > 0){
+          l = l.add(vr.mul(coef.vertex_resolution));
+        }
+      }
+
+
+      if(coef.aspect_ratio > 0 || computeMetric){
+        let [as, m_as] = aspect_ratio_loss(x);
+        metrics.aspect_ratio = m_as;
+        if(coef.aspect_ratio > 0){
+          l = l.add(as.mul(coef.aspect_ratio));
+        }
+      }
+
+
+      if(coef.gabriel > 0 || computeMetric){
+        let [gb, m_gb] = gabriel_loss(x, adj, pdist);
+        metrics.gabriel = m_gb;
+        if(coef.gabriel > 0){
+          l = l.add(gb.mul(coef.gabriel));
+        }
+      }
+
+
+      //// if(coef.area > 0){
+      ////   let al = area_loss(x, pdist, dataObj.edges, dataObj.desiredArea);
+      ////   l = l.add(al.mul(coef.area));
+      //// }
+      ///
       let upperBound = 1e4;
       return l.div(upperBound).tanh().mul(upperBound);
     });
     return loss;
   }, true, [x]);
-  console.log(metrics);
-  return {loss,metrics};
+  return {loss, metrics};
 
 }
 
@@ -689,13 +866,14 @@ function train(dataObj, remainingIter, optimizers, callback){
     console.log('Max iteration reached, please double click the play button to restart');
     window.playButton.on('click')(false);
   }else{
-    let {loss, metrics} = trainOneIter(dataObj, optimizers[0]);
-    
+    let computeMetric = true;//remainingIter % 50 == 0;
+    let {loss, metrics} = trainOneIter(dataObj, optimizers[0], computeMetric);
 
     if (callback){
       callback({
         remainingIter,
         loss: loss.dataSync()[0],
+        metrics
       });
     }
     dataObj.animId = requestAnimationFrame(()=>{
@@ -727,6 +905,87 @@ function updateAxes(svg, sx, sy){
   .attr('transform', `translate(${sx.range()[0]},${0})`)
   .call(ay);
 }
+
+let historicalMin = {};
+let lowerBound = {
+  stress: undefined,
+  vertex_resolution: 0,
+  edge_uniformity: undefined,
+  neighbor: 0,
+  crossing_angle: 0,
+  angular_resolution: 0,
+  aspect_ratio: 0,
+  gabriel: 0,
+  crossing_number: undefined,
+};
+function drawProperty(svg, metricHistory, name){
+
+  let xmin = 0;
+  let xmax = metricHistory.length-1;
+
+  let ymin;
+  if(lowerBound[name]===undefined){
+    ymin = d3.min(metricHistory);
+    if(name in historicalMin){
+      historicalMin[name] = Math.min(historicalMin[name], ymin);
+    }else{
+      historicalMin[name] = ymin;
+    }
+    ymin = historicalMin[name];
+  }else{
+    ymin = lowerBound[name];
+  }
+  let ymax = 1;
+
+  let pathData = metricHistory.map((y,i)=>({x:i, y:y}));
+  pathData.unshift({x:0, y:ymin-0.1});
+  pathData.push({x:xmax, y:ymin-0.1});
+
+
+  let width = svg.node().getBoundingClientRect().width;
+  let height = svg.node().getBoundingClientRect().height;
+  svg
+  .attr('width', width)
+  .attr('height', height);
+  let sx = d3.scaleLinear().domain([xmin, xmax]).range([0, width]);
+  let sy = d3.scaleLinear().domain([ymin, ymax]).range([height, 0]);
+
+  let line = d3.line()
+  .x((d,i)=>sx(d.x))
+  .y((d,i)=>sy(d.y))
+  .curve(d3.curveLinear);
+
+  svg.selectAll('.metric-line')
+  .data([pathData, ])
+  .enter()
+  .append('path')
+  .attr('class', 'metric-line');
+
+  let metricLine = svg.selectAll('.metric-line')
+  .attr('d', d=>line(d));
+
+}
+ 
+
+function traceMetrics(svgs, metricsHistory, length){
+  svgs.each(function(){
+    let svg = d3.select(this);
+    let name = svg.attr('for');
+    let dummyValue = 0.0;
+    let metricHistory = metricsHistory.map(d=>{
+      if(name in d){
+        let value = d[name];
+        dummyValue = value;
+        return value;
+      }else{
+        return dummyValue;
+      }
+    });
+    drawProperty(svg, metricHistory, name);
+  });
+
+}
+
 
 function traceLoss(svg, losses, maxPlotIter){
   let sx = d3.scaleLinear();
@@ -961,6 +1220,7 @@ window.onload = function(){
   let fn = `data/${graphTypeSelect.node().value}.json`;
 
   let lrSlider = d3.select('#lr');
+  window.lr0 = +Math.exp(lrSlider.node().value);
   window.lr = +Math.exp(lrSlider.node().value);
   window.lrSlider = lrSlider;
   let lrText = d3.select('#lrText')
@@ -1016,14 +1276,19 @@ window.onload = function(){
 
   let maxPlotIter = 50;
   let niter = 20000;
+  let maxMetricSize = 10;
 
   let optimizers = [tf.train.momentum(lr, momentum, false)];
   window.optimizers = optimizers;
   let losses = [];
+  let metrics = [];
+  window.metrics = metrics;
   let animId = 0;
 
   let svg_loss = d3.select('#loss');
   let svg_graph = d3.select('#graph');
+
+  let svg_metrics = d3.selectAll('.metric');
 
   let playButton = d3.select('#play');
   window.playButton = playButton;
@@ -1037,10 +1302,16 @@ window.onload = function(){
       window.graph = graph;
       let x;
       function reset(){
+        console.log('reset');
         x = tf.variable(
           tf.randomUniform([graph.nodes.length,2], -1, 1)
         );
         boundaries = undefined;
+        historicalMin = {};
+        if(lrSlider.on('input')){
+          lrSlider.on('input')(lr0);
+        }
+
       }
 
       if(graph.initPositions){
@@ -1084,12 +1355,17 @@ window.onload = function(){
       function play(){
         train(dataObj, niter, optimizers, (record)=>{
           // console.log(record);
+          metrics.push(record.metrics);
           losses.push(record.loss);
           if (losses.length>maxPlotIter){
             losses = losses.slice(losses.length-maxPlotIter);
           }
+          if (metrics.length > maxMetricSize){
+            metrics = metrics.slice(metrics.length-maxMetricSize);
+          }
           traceLoss(svg_loss, losses, maxPlotIter);
-
+          traceMetrics(svg_metrics, metrics, maxMetricSize);
+          window.metrics = metrics;
           if (losses.length >= 10){
             let n = losses.length;
             let firstSlice = losses.slice(Math.floor(n/2), Math.floor(n/4*3));

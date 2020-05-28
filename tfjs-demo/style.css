@@ -45,11 +45,27 @@ svg line, svg path.domain{
 
 label {
   margin-bottom: 0;
-  margin-top: .6rem;
+  /*margin-top: .6rem;*/
 }
 
 .custom-range{
   height: 1.2rem;
+  width: 100%;
+}
+
+.sliderContainer{
+  padding-top: 0.6rem;
+}
+
+svg.metric{
+  /*float: right;*/
+  border-radius: 2px;
+  width: 10%;
+  height: 1.2rem;
+  margin: 0;
+}
+.metric-line{
+  fill:#1f78b4;
 }
 
 /*https://www.w3schools.com/howto/howto_js_rangeslider.asp*/
