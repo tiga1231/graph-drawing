@@ -55,9 +55,13 @@ function edge_uniformity_loss(pdist, adj){
 }
 
 
-function vertex_resolution_loss(pdist, resolution=0.1){
+function vertex_resolution_loss(pdist, resolution){
+  let n = pdist.shape[0];
+  resolution = resolution || 1.0/Math.sqrt(n);
+
   return tf.tidy(()=>{
     let mask = tf.scalar(1.0).sub(tf.eye(pdist.shape[0]));
+    
     let max = pdist.max();
     let pdist_normalized = pdist.div(max.add(0.001));
 
@@ -67,9 +71,10 @@ function vertex_resolution_loss(pdist, resolution=0.1){
     let r = pdist_normalized.sub(resolution).div(-resolution).relu();
     // let loss = tf.scalar(1.0).sub(tf.scalar(1.001).sub(r.pow(2)));
     let loss = r.pow(2);
-
     loss = loss.mul(mask).sum().mul(0.02);
+
     let metric = 1.0 - r.mul(mask).max().dataSync()[0];
+    
     return [loss, metric];
   });
 }
@@ -105,13 +110,39 @@ function angular_resolution_metric(x, neighbors){
   return metric;
 }
 
+
+function std(x){
+  return tf.tidy(()=>{
+    let mean = x.mean();
+    let variance = x.sub(mean).pow(2).div(x.shape[0]);
+    return variance.sqrt();
+  });
+}
+
+function variance(x){
+  return tf.tidy(()=>{
+    let mean = x.mean();
+    let variance0 = x.sub(mean).pow(2).div(x.shape[0]);
+    return variance0;
+  });
+}
+
 function angular_resolution_loss(x, neighbors){
   return tf.tidy(()=>{
     var nV = x.shape[0];
     let losses = [];
-    let metric_min = [];//for metric
     for(var i = 0; i<nV; i++){
+
+      //stochastic
+      // let dropoutRate = 0.1;
+      // if(Math.random() < dropoutRate){
+      //   continue;
+      // }
+
       let n = neighbors[i].length;
+      if(n <= 1){
+        continue;
+      }
       let v = x.gather(neighbors[i]).sub(x.gather(i));
       let xcoord = v.slice([0,0], [v.shape[0],1]);
       let ycoord = v.slice([0,1], [v.shape[0],1]);
@@ -119,23 +150,30 @@ function angular_resolution_loss(x, neighbors){
 
       // robjohn's answer at:
       // https://math.stackexchange.com/questions/1327253/how-do-we-find-out-angle-from-x-y-coordinates
+      // TODO make it more stable (e.g. on path-10)
       let angle = tf.atan(ycoord.div(xcoord.add(norm))).mul(2).add(Math.PI).as1D();
 
       let angle_sorted = topk(angle, n);
       let angle_diff = angle_sorted
         .slice([0,], n-1)
         .sub(angle_sorted.slice([1,], n-1));
-      let last = tf.scalar(3.1415926*2).add(angle_sorted.gather(n-1).sub(angle_sorted.gather(0)));
+      let last = tf.scalar(Math.PI*2).add(angle_sorted.gather(n-1).sub(angle_sorted.gather(0)));
       angle_diff = tf.concat([angle_diff, last.reshape([1])]);
-      let energy = tf.exp(angle_diff.mul(-1)).sum();
-      losses.push(energy);
 
-      // metric_min.push( angle_diff.min().dataSync()[0] / (2*Math.PI / n));
+      let sensitivity = 1.0;
+      let energy = tf.exp(angle_diff.mul(-1).mul(sensitivity)).sum();
+      losses.push(energy);
+      // 
+      // let cross_entropy = angle_diff.div(Math.PI*2).log().sum().div(n).mul(-1/n); //cross entropy loss against uniform distribution={0.5, 0.5}
+      // losses.push(cross_entropy);
     }
-    let loss = tf.stack(losses).sum();
-    // let metric = math.min(metric_min);
-    // return [loss, metric];
-    return loss;
+    if(losses.length > 0){
+      let loss = tf.stack(losses).sum().mul(2);
+      return loss;
+    }else{
+      return tf.scalar(0.0);
+    }
+
   });
 }
 
@@ -284,7 +322,7 @@ function crossing_angle_loss(x, graph, sampleSize=1){
       let e1 = p2.sub(p1);
       let e2 = p4.sub(p3);
       let cos = cosSimilarity(e1, e2);
-      let loss = cos.square().mean();
+      let loss = cos.square().sum().div(10);
       return loss;
     });
 
@@ -615,18 +653,58 @@ function gabriel_loss(x, adj, pdist){
 
     let radii = pdist.div(2.0);//[e1, e2]
 
-    let loss = dist.sub(radii).mul(-1).relu().pow(2);
+    let loss = dist.sub(radii).mul(-1).relu();
     let mask = adj;
     loss = loss.mul(mask);
-    loss = loss.sum().div(2);
+    loss = loss.sum().div(10);
 
-    let metric = tf.scalar(1.0).sub(  dist.sub(radii).mul(-1).relu().div(radii.add(0.001)) );
-    metric = metric.mul(mask).add(tf.scalar(1.0).sub(mask).mul(1e2)).min();
+    let metric = tf.scalar(1.0).sub(  dist.sub(radii).mul(-1).relu().div(radii.add(tf.eye(radii.shape[0]))) );
+    metric = metric.mul(mask).add(tf.scalar(1.0).sub(mask).mul(1e6)).min();
 
     return [loss, metric.dataSync()[0]];
   });
-  
 }
+
+
+// function gabriel_loss(x, adj, pdist){
+//   return tf.tidy(()=>{
+
+//     let x1 = x.broadcastTo([x.shape[0], ...x.shape]);
+//     let centers = x1.add(x1.transpose([1,0,2])).div(2.0);
+//     centers = centers.broadcastTo([x.shape[0], ...centers.shape]);
+//     let dist = centers.sub(x.reshape([x.shape[0], 1, 1, x.shape[1]])).norm('euclidean', 3);//[x, e1, e2]
+//     let radii = pdist.div(2.0);//[e1, e2]
+
+//     let mask = adj;
+//     let mask2 = tf.scalar(1.0).sub(tf.eye(adj.shape[0]));
+//     let pred = dist.div( radii.add(tf.eye(radii.shape[0])) ).sub(1.0);
+
+//     //softmin
+//     // pred = pred
+//     // .mul(mask)
+//     // .mul(mask2.reshape([mask2.shape[0], 1, mask2.shape[1]]))
+//     // .mul(mask2.reshape([mask2.shape[0], mask2.shape[1], 1]));
+//     // let weights = softmin(pred, [0], 1);
+//     // let non_zero = tf.tensor(pred.greater(0).arraySync());
+//     // weights = weights.div(weights.mul(non_zero).sum(0).add(0.0001));
+//     // pred = pred.mul(weights);
+//     // pred = pred.sum(0);
+//     // 
+    
+//     pred = pred
+//     .mul(mask)
+//     .min(0);
+
+
+//     let loss = lovaszHingeLoss(pred, adj.arraySync());
+//     loss = loss.div(5);
+
+//     let metric = tf.scalar(1.0).sub(  dist.sub(radii).mul(-1).relu().div(radii.add(0.001)) );
+//     metric = metric.mul(mask).add(tf.scalar(1.0).sub(mask).mul(1e2)).min();
+//     return [loss, metric.dataSync()[0]];
+//   });
+// }
+
 
 function rotations(n=10){
   return tf.tidy(()=>{
@@ -651,6 +729,11 @@ function softmax(x, dims=[0], sensitivity=1.0){
     return res;
   });
 }
+
+function softmin(x, dims=[0], sensitivity=1.0){
+  return softmax(x.mul(-1));
+}
+
 
 
 function aspect_ratio_loss(x){

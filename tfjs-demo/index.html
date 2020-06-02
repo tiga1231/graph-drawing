@@ -58,8 +58,8 @@
         <label for='graphType'>Graph Type:</label>
         <select id="graphType" class="form-control" style='width: 250px;'>
           <option value="k-5">k-5</option>
-          <option value="path-5" >path-5</option>
-          <option value="path-10" selected>path-10</option>
+          <option value="path-5" selected>path-5</option>
+          <option value="path-10" >path-10</option>
           <option value="cycle-10" >cycle-10</option>
           <option value="tree-2-3" >tree-2-3</option>
           <option value="tree-2-4">tree-2-4</option>
@@ -82,13 +82,13 @@
           <div class='sliderContainer'>
             <svg class='metric' for='stress'></svg>
             <label for='stressSlider'>Stress <span id='stressLabel'></span></label><br>
-            <input id='stressSlider' class='custom-range' type="range" min=0 max=1 value=0.5 step=0.01>
+            <input id='stressSlider' class='custom-range' type="range" min=0 max=1 value=0.0 step=0.01>
           </div>
 
           <div class='sliderContainer'>
             <svg class='metric' for='vertex_resolution'></svg>
             <label for='vertexResolutionSlider'>Vertex Resolution <span id='vertexResolutionLabel'></span></label><br>
-            <input id='vertexResolutionSlider' class='custom-range' type="range" min=0 max=1 value=0.0 step=0.01>
+            <input id='vertexResolutionSlider' class='custom-range' type="range" min=0 max=1 value=0.5 step=0.01>
           </div>
 
           <div class='sliderContainer'>
