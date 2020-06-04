@@ -15,7 +15,7 @@ table {
 }
 
 th, td {
-  padding: 15px;
+  padding: 3px;
 }
 
 body{
@@ -24,7 +24,12 @@ body{
 
 g.xAxis, g.yAxis{
   stroke-width: 0.5;
+  display: none;
 }
+
+
+ 
+
 /*.container{
   display: grid;
   grid-template-columns: 2fr 1fr repeat(7, 1fr);

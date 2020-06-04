@@ -45,5 +45,42 @@
 <body>
 <table id='metrics'>
 </table>
+
+
+<button id='transpose' onclick='transpose()'>Transpose</button>
+<script>
+// https://stackoverflow.com/questions/6297591/how-to-invert-transpose-the-rows-and-columns-of-an-html-table/40213981
+
+function transpose(){
+  $("table").each(function() {
+      var $this = $(this);
+      var newrows = [];
+      $this.find("tr").each(function(){
+          let i = 0;
+          $(this).find("th, td").each(function(){
+            i++;
+            if(newrows[i] === undefined) { newrows[i] = $("<tr></tr>"); }
+            newrows[i].append($(this));
+          });
+      });
+      $this.find("tr").remove();
+      $.each(newrows, function(){
+          $this.append(this);
+      });
+  });
+  return false;
+};
+</script>
+
+
+<button id='export' onclick='exportPdf()'>Export</button>
+<script>
+function exportPdf(){
+  $('button').remove();
+  print();
+};
+</script>
+
+
 </body>
 </html>

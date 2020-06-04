@@ -33,6 +33,7 @@ function drawGraph(graph, svg){
     let width = svg.node().clientWidth;
     let height = svg.node().clientHeight;
 
+    let margin = 5;
     let xExtent = d3.extent(graph.nodes, d=>d.x);
     let yExtent = d3.extent(graph.nodes, d=>d.y);
     
@@ -44,8 +45,9 @@ function drawGraph(graph, svg){
     let xSize = xExtent[1] - xExtent[0];
     let ySize = yExtent[1] - yExtent[0];
 
-    let xViewport = [30, width-20];
-    let yViewport = [height-20,20];
+
+    let xViewport = [margin, width-margin];
+    let yViewport = [height-margin,margin];
     let drawWidth = xViewport[1] - xViewport[0];
     let drawHeight = yViewport[0] - yViewport[1];
 
@@ -78,7 +80,7 @@ function drawGraph(graph, svg){
     .attr('class', 'edge')
     .attr('fill', 'none')
     .attr('stroke', '#333')
-    .attr('stroke-width', 2)
+    .attr('stroke-width', 1)
     .attr('opacity', 0.8);
     edges = svg.selectAll('.edge')
     .attr('x1', d=>svg.sx(d.source.x))
@@ -114,12 +116,12 @@ function drawGraph(graph, svg){
 
     let newCircles = newNodes
     .append('circle')
-    .attr('r', 6)
+    .attr('r', 2)
     .attr('fill', d3.schemeCategory10[0]);
 
     let newTexts = newNodes
     .append('text')
-    .style('font-size', 6)
+    .style('font-size', 0)
     .style('fill', '#eee')
     .style('text-anchor', 'middle')
     .style('alignment-baseline', 'middle');
@@ -147,29 +149,28 @@ function drawGraph(graph, svg){
 
 
 
-function loadAndEvaluate(fn, metricNames){
-  let graphName = fn.split('/');
-  graphName = graphName[graphName.length-1].split('.')[0];
+// function loadAndEvaluate(fn, metricNames){
+//   let graphName = fn.split('/');
+//   graphName = graphName[graphName.length-1].split('.')[0];
 
-  d3.json(fn).then((graph)=>{
+//   d3.json(fn).then((graph)=>{
 
-    preprocess(graph);
-    // let xmean = d3.mean(graph.nodes, d=>d.x);
-    // let ymean = d3.mean(graph.nodes, d=>d.y);
+//     preprocess(graph);
+//     // let xmean = d3.mean(graph.nodes, d=>d.x);
+//     // let ymean = d3.mean(graph.nodes, d=>d.y);
+//     // graph.nodes.forEach(d=>{
+//     //   d.x = (d.x - xmean);// / 80;
+//     //   d.y = (d.y - ymean);// / 80;
+//     // })
 
-    // graph.nodes.forEach(d=>{
-    //   d.x = (d.x - xmean);// / 80;
-    //   d.y = (d.y - ymean);// / 80;
-    // })
+//     window.x = graph.nodes.map(d=>[d.x, d.y]);
 
-    window.x = graph.nodes.map(d=>[d.x, d.y]);
-
-    evaluateAndShow(graph, graphName, metricNames);
-  });
-}
+//     evaluateAndShow(graph, graphName, metricNames);
+//   });
+// }
 
 
-function evaluateAndShow(graph, graphName, metricNames){
+function evaluateAndShow(graph, graphName, groupIndex, metricNames){
   let n_neighbors = graph.graphDistance
   .map((row)=>{
     return row.reduce((a,b)=>b==1?a+1:a, 0);
@@ -213,29 +214,31 @@ function evaluateAndShow(graph, graphName, metricNames){
   //graph thumbnail
   let svg = tableRow.append('td')
   .append('svg')
-  .attr('width', 200*1.618)
-  .attr('height', 200);
+  .attr('width', 50)
+  .attr('height', 50);
   drawGraph(graph, svg);
 
   //metrics
   let metricList = metricNames.map(k=>({id:k, value:metrics[k]}));
-  showMetrics(metricList, tableRow);
-
+  showMetrics(metricList, tableRow, groupIndex);
+  return tableRow;
 }
 
-function showMetrics(metricList, row){
+
+
+function showMetrics(metricList, row, groupIndex){
   row.selectAll('.metric')
   .data(metricList)
   .enter()
   .append('td')
-  .attr('class', 'metric');
+  .attr('class', d=>`metric ${d.id}-group-${groupIndex}`);
 
   let td = row.selectAll('.metric');
   td.text(d=>{
     if(d.id == 'crossing_number'){
       return `${d.value.toFixed(0)}`;
     }else{
-      return `${d.value.toFixed(4)}`;
+      return `${d.value.toFixed(2)}`;
     }
   });
 }
@@ -255,55 +258,143 @@ function initTableHeader(keys){
 
 }
 
+
+function highlightBest(groupIndex, metricNames){
+
+  // 'stress', min
+  // 'vertex_resolution', max
+  // 'angular_resolution', max
+  // 'aspect_ratio', max
+  // 'crossing_angle', min
+  // 'crossing_number', min
+  // 'edge_uniformity', min
+  // 'gabriel', max
+  // 'neighbor', max
+
+  metricNames.forEach(name=>{
+    let data = d3.selectAll(`.${name}-group-${groupIndex}`).data();
+
+
+    let best;
+    if(name == 'vertex_resolution'
+      || name == 'aspect_ratio'
+      || name == 'gabriel'
+      || name == 'neighbor'
+      || name == 'angular_resolution'
+    ){
+      best = d3.max(data, d=>d.value);
+    }else{
+      best = d3.min(data, d=>d.value);
+    }
+    console.log(name, best, data);
+    d3.selectAll(`.${name}-group-${groupIndex}`)
+    .style('font-weight', d=>{
+      if(Math.abs(d.value - best) < 0.01){
+        return 800;
+      }else{
+        return 200;
+      }
+    });
+  });
+}
+
+
 window.onload = function(){
-  let keys = [
-  "stress", 
-  "vertex_resolution",
-  "angular_resolution", 
-  "aspect_ratio", 
-  "crossing_angle", 
-  "crossing_number", 
-  "edge_uniformity", 
-  "gabriel", 
-  "neighbor", 
+  let metricNames = [
+  'stress', 
+  'vertex_resolution',
+  'angular_resolution', 
+  'aspect_ratio', 
+  'crossing_angle', 
+  'crossing_number', 
+  'edge_uniformity', 
+  'gabriel', 
+  'neighbor', 
   ];
-  initTableHeader(keys);
+  initTableHeader(metricNames);
 
-  let fns = [
-    "data/neato_sfdp_layouts_json/cycle_sfdp.json",
-    "data/neato_sfdp_layouts_json/cycle_neato.json",
-    "data/neato_sfdp_layouts_json/bipartite_neato.json",
-    "data/neato_sfdp_layouts_json/bipartite_sfdp.json",
-    "data/neato_sfdp_layouts_json/spx_teaser_neato.json",
-    "data/neato_sfdp_layouts_json/cube_neato.json",
-    "data/neato_sfdp_layouts_json/dodecahedron_sfdp.json",
-    "data/neato_sfdp_layouts_json/cube_sfdp.json",
-    "data/neato_sfdp_layouts_json/nonsymmetric_neato.json",
-    "data/neato_sfdp_layouts_json/dodecahedron_neato.json",
-    "data/neato_sfdp_layouts_json/tree_sfdp.json",
-    "data/neato_sfdp_layouts_json/block_sfdp.json",
-    "data/neato_sfdp_layouts_json/grid_sfdp.json",
-    "data/neato_sfdp_layouts_json/grid_neato.json",
-    "data/neato_sfdp_layouts_json/block_neato.json",
-    "data/neato_sfdp_layouts_json/tree_neato.json",
-    "data/neato_sfdp_layouts_json/nonsymmetric_sfdp.json",
-    "data/neato_sfdp_layouts_json/complete_sfdp.json",
-    "data/neato_sfdp_layouts_json/complete_neato.json",
-    "data/neato_sfdp_layouts_json/spx_teaser_sfdp.json",
-
+  let fnTuples = [
+    [
+      'data/random_layouts_json/cycle_random.json',
+      'data/neato_sfdp_layouts_json/cycle_neato.json',
+      'data/neato_sfdp_layouts_json/cycle_sfdp.json',
+      'data/gd2_layouts_json/cycle_GD2.json',
+    ],
+    [
+      'data/random_layouts_json/bipartite_random.json',
+      'data/neato_sfdp_layouts_json/bipartite_neato.json',
+      'data/neato_sfdp_layouts_json/bipartite_sfdp.json',
+      'data/gd2_layouts_json/bipartite_GD2.json',
+    ],
+    [
+      'data/random_layouts_json/spx_teaser_random.json',
+      'data/neato_sfdp_layouts_json/spx_teaser_neato.json',
+      'data/neato_sfdp_layouts_json/spx_teaser_sfdp.json',
+      'data/gd2_layouts_json/spx_teaser_GD2.json',
+    ],
+    [
+      'data/random_layouts_json/cube_random.json',
+      'data/neato_sfdp_layouts_json/cube_neato.json',
+      'data/neato_sfdp_layouts_json/cube_sfdp.json',
+      'data/gd2_layouts_json/cube_GD2.json',
+    ],
+    [
+      'data/random_layouts_json/dodecahedron_random.json',
+      'data/neato_sfdp_layouts_json/dodecahedron_neato.json',
+      'data/neato_sfdp_layouts_json/dodecahedron_sfdp.json',
+      'data/gd2_layouts_json/dodecahedron_GD2.json',
+    ],
+    [
+      'data/random_layouts_json/nonsymmetric_random.json',
+      'data/neato_sfdp_layouts_json/nonsymmetric_neato.json',
+      'data/neato_sfdp_layouts_json/nonsymmetric_sfdp.json',
+      'data/gd2_layouts_json/nonsymmetric_GD2.json',
+    ],
+    [
+      'data/random_layouts_json/tree_random.json',
+      'data/neato_sfdp_layouts_json/tree_neato.json',
+      'data/neato_sfdp_layouts_json/tree_sfdp.json',
+      'data/gd2_layouts_json/tree_GD2.json',
+    ],
+    [
+      'data/random_layouts_json/block_random.json',
+      'data/neato_sfdp_layouts_json/block_neato.json',
+      'data/neato_sfdp_layouts_json/block_sfdp.json',
+      'data/gd2_layouts_json/block_GD2.json',
+    ],
+    [
+      'data/random_layouts_json/grid_random.json',
+      'data/neato_sfdp_layouts_json/grid_neato.json',
+      'data/neato_sfdp_layouts_json/grid_sfdp.json',
+      'data/gd2_layouts_json/grid_GD2.json',
+    ],
+    [
+      'data/random_layouts_json/complete_random.json',
+      'data/neato_sfdp_layouts_json/complete_neato.json',
+      'data/neato_sfdp_layouts_json/complete_sfdp.json',
+      'data/gd2_layouts_json/complete_GD2.json',
+    ],
   ];
-  for(let fn of fns){
-    loadAndEvaluate(fn, keys);
-  }
+
+  fnTuples.forEach((fnTuple, groupIndex)=>{
+    let promises = fnTuple.map(fn=>d3.json(fn));
+    Promise.all(promises)
+    .then((graphTuple)=>{
+      let rows = [];
+      zip(fnTuple, graphTuple)
+      .forEach((fn_graph_pair)=>{
+        let [fn, graph] = fn_graph_pair;
+        let graphName = fn.split('/');
+        graphName = graphName[graphName.length-1].split('.')[0];
+        preprocess(graph);
+        evaluateAndShow(graph, graphName, groupIndex, metricNames);
+      });
+      highlightBest(groupIndex, metricNames);
+    });
+  })
+  
+
 };//onload end
-
-
-
-
-
-
-
-
 
 
 

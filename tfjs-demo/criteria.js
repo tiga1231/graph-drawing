@@ -219,7 +219,7 @@ function angular_resolution_loss(x, neighbors){
 
 function angular_resolution_loss1(x, adj){
   return tf.tidy(()=>{
-    x.print();
+    
     let n = x.shape[0];
     let targetNodes = x.broadcastTo([x.shape[0], ...x.shape]);
     let sourceNodes = x.reshape([x.shape[0], 1, x.shape[1]])
@@ -228,7 +228,7 @@ function angular_resolution_loss1(x, adj){
     let xcoord = v.slice([0,0,0], [v.shape[0],v.shape[1],1]);
     let ycoord = v.slice([0,0,1], [v.shape[0],v.shape[1],1]);
     let norm = v.norm('euclidean', 2, true);
-    norm.print();
+
     let angle = tf.atan(ycoord.div(xcoord.add(norm))).mul(2).add(Math.PI);
     angle = angle.reshape([angle.shape[0],angle.shape[1]]);
     angle = angle.mul(adj);
@@ -600,8 +600,6 @@ function neighbor_loss(pdist, adj, thresh, scale, margin){
     let loss = lovaszHingeLoss(pred, truth.arraySync());
 
     let pred2 = pdist.sub(thresh).mul(-1).mul(mask);
-    pred2.print();
-    truth.print();
     let metric = jaccardIndex(pred2.arraySync(), truth.arraySync());
     return [loss, metric];
   });
@@ -899,10 +897,6 @@ function trainOneIter(dataObj, optimizer, computeMetric=true){
         let mask = tf.scalar(1.0).sub(tf.eye(pdist.shape[0]));
         let pred = pdist.sub(thresh).mul(-1).mul(mask);
         let m_nb = jaccardIndex(pred.arraySync(), truth.arraySync());
-        
-        console.log(pred.arraySync().map(row=>row.map(d=>d>0?1.0:0.0)));
-        truth.print();
-
         metrics.neighbor = m_nb;
       }
 

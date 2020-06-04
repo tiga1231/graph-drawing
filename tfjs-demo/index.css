@@ -8,9 +8,17 @@ body{
 }
 
 .fas {
-  font-size: 40px;
+  font-size: 2rem;
 }
 
+.fa-file-download{
+  margin-left: 2rem;
+}
+
+
+#graphType{
+  width: 70%;
+}
 
 svg {
   margin-bottom: 10px;
@@ -66,6 +74,14 @@ svg.metric{
 }
 .metric-line{
   fill:#1f78b4;
+}
+
+
+.tool-tip{
+  alignment-baseline: middle;
+  font-size: 0.5rem;
+  text-anchor: middle;
+  mix-blend-mode: difference;
 }
 
 /*https://www.w3schools.com/howto/howto_js_rangeslider.asp*/

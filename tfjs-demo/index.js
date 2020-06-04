@@ -78,6 +78,7 @@ window.onload = function(){
   let playButton = d3.select('#play');
   window.playButton = playButton;
   let resetButton = d3.select('#reset');
+  let downloadButton = d3.select('#download');
 
   updateSvgSize(svg_loss, svg_graph);
   window.addEventListener('resize', ()=>{updateSvgSize(svg_loss, svg_graph)});
@@ -192,6 +193,29 @@ window.onload = function(){
         });
         dataObj.x = x;
         drawGraph(svg_graph, graph);
+      });
+
+      downloadButton.on('click', ()=>{
+        let res = {};
+        res.nodes = graph.nodes;
+        res.edges = graph.edges.map(d=>({
+          source: d.source.id, 
+          target: d.target.id,
+        }));
+        res.coef = coef;
+        res.optimizer = {
+          lr: optimizers[0].learningRate, 
+          momentum: optimizers[0].momentum
+        };
+        res.graphDistance = graph.graphDistance;
+        res.weight = graph.weight;
+        let res_json = JSON.stringify(res, null, 2);
+        let file_name = `${graphTypeSelect.node().value}.json`;
+        let dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(res_json);
+        var anchor = document.getElementById('download-json');
+        anchor.setAttribute('href', dataStr);
+        anchor.setAttribute('download', file_name);
+        anchor.click();
       });
 
       graphTypeSelect.on('change', function(){

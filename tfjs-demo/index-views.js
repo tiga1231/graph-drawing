@@ -45,11 +45,11 @@ let bestBound = {
   gabriel: 1,
   crossing_number: 0,
 };
+
 function drawProperty(svg, metricHistory, name){
 
   let xmin = 0;
   let xmax = metricHistory.length-1;
-
   let ymin;
   if(worstBound[name] === -Infinity 
     || worstBound[name] === Infinity
@@ -101,6 +101,21 @@ function drawProperty(svg, metricHistory, name){
 
   let metricLine = svg.selectAll('.metric-line')
   .attr('d', d=>line(d));
+
+  //TODO: better tool tip
+  svg.selectAll('.tool-tip')
+  .data([pathData, ])
+  .enter()
+  .append('text')
+  .attr('class', 'tool-tip');
+
+  let tooltip = svg.selectAll('.tool-tip')
+  .attr('x', sx((0+xmax)/2))
+  .attr('y', sy((ymin+ymax)/2))
+  .text(d=>{
+    return (d[d.length-2].y).toFixed(2);
+  });
+
 
 }
  
