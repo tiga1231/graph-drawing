@@ -27,18 +27,25 @@ def block_graph(nc, cs):
 #   networkx_to_json(G)
 
 Gs = [
-('path-10', nx.path_graph(10)),
 ('path-5', nx.path_graph(5)),
-('cycle_graph_10', nx.cycle_graph(10)),
-('grid_graph_5_5', nx.grid_graph(dim=[5,5])),
-('grid_graph_10_6', nx.grid_graph(dim=[10,6])),
-('full_rary_tree', nx.full_rary_tree(2, 15)), 
-('complete_graph_20', nx.complete_graph(20)), 
-('complete_bipartite_graph_5_5', nx.complete_bipartite_graph(5, 5)),
-('dodecahedral_graph', nx.dodecahedral_graph()), 
-('hypercube_graph_3', nx.hypercube_graph(3)),
-('block_graph_5_5', block_graph(5,5)),
-('input_9', build_networkx_graph('input9.txt')),
+('path-10', nx.path_graph(10)),
+('cycle-10', nx.cycle_graph(10)),
+
+('grid-5-5', nx.grid_graph(dim=[5,5])),
+('grid-10-6', nx.grid_graph(dim=[10,6])),
+
+('tree-2-3', nx.balanced_tree(2, 3)), 
+('tree-2-4', nx.balanced_tree(2, 4)), 
+('tree-2-5', nx.balanced_tree(2, 5)), 
+
+('k-5', nx.complete_graph(5)), 
+('k-20', nx.complete_graph(20)), 
+
+('bipartite-graph-5-5', nx.complete_bipartite_graph(5, 5)),
+('dodecahedron', nx.dodecahedral_graph()), 
+('cube', nx.hypercube_graph(3)),
+('block-5-5', block_graph(5,5)),
+('input-9', build_networkx_graph('input9.txt')),
 ]
 for name, G in Gs:
   print(name)

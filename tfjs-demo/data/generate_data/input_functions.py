@@ -560,7 +560,9 @@ def dict2tensor(d, fill=None):
 def networkx_to_json_2(G, name):
   D, k2i = dict2tensor(dict(nx.all_pairs_shortest_path_length(G)))
   print(D.shape)
-  W = 1/(D**2+1)
+  n = len(G.nodes)
+  eye = torch.eye(n)
+  W = 1/(D**2+eye)
 
   graph = {
     'nodes': [

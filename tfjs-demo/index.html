@@ -22,7 +22,7 @@
   <!-- <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous"> -->
   <!-- <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.2.0/css/all.css" integrity="sha384-hWVjflwFxL6sNzntih27bfxkr27PmbbK/iSvJ+a4+0owXq79v+lsFkW54bOGbiDQ" crossorigin="anonymous"> -->
   
-  <link rel="stylesheet" href="./style.css">
+  <link rel="stylesheet" href="./index.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/numeric/1.2.6/numeric.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/6.6.4/math.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.7.2/dist/tf.min.js"></script>
@@ -36,7 +36,9 @@
     });
   };
   </script>
-  <script src='main.js'></script>
+  <script src='index-views.js'></script>
+  <script src='criteria.js'></script>
+  <script src='index.js'></script>
 
 </head>
 
@@ -58,21 +60,25 @@
         <label for='graphType'>Graph Type:</label>
         <select id="graphType" class="form-control" style='width: 250px;'>
           <option value="k-5">k-5</option>
+          <option value="k-20">k-20</option>
+
           <option value="path-5" selected>path-5</option>
           <option value="path-10" >path-10</option>
+
           <option value="cycle-10" >cycle-10</option>
+
           <option value="tree-2-3" >tree-2-3</option>
           <option value="tree-2-4">tree-2-4</option>
-          <!-- <option value="tree-2-5">tree-2-5</option> -->
+          <option value="tree-2-5">tree-2-5</option>
+          
           <option value="cube" >cube</option>
           <option value="dodecahedron">dodecahedron</option>
 
-          <option value="input_9">input_9</option>
-          <option value="block_graph_5_5" >block_graph_5_5</option>
-          <option value="complete_bipartite_graph_5_5">complete_bipartite_graph_5_5</option>
-          <option value="complete_graph_20">complete_graph_20</option>
-          <option value="grid_graph_5_5" >grid_graph_5_5</option>
-          <option value="grid_graph_10_6" >grid_graph_10_6</option>
+          <option value="input-9">input-9</option>
+          <option value="block-5-5" >block-5-5</option>
+          <option value="bipartite-graph-5-5">bipartite-graph-5-5</option>
+          <option value="grid-5-5" >grid-5-5</option>
+          <option value="grid-10-6" >grid-10-6</option>
         </select>
       </div>
 
