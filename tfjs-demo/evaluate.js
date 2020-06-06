@@ -1,4 +1,6 @@
-const diverging_colors = ['#d53e4f','#fc8d59','#fee08b','#ffffbf','#e6f598','#99d594','#3288bd'];
+const diverging_colors = ['#d73027','#f46d43','#fdae61','#dddddd','#abd9e9','#74add1','#4575b4'];
+
+// const diverging_colors = ['#d7191c','#fdae61','#ffffbf','#abdda4','#2b83ba'];
 
 function linspace(min, max, n=2){
   return d3.range(n).map(i=>min + (max-min) * i/(n-1));
@@ -118,7 +120,7 @@ function drawThumbnail(graph, svg){
     .attr('class', 'edge')
     .attr('fill', 'none')
     .attr('stroke', '#333')
-    .attr('stroke-width', 1.5)
+    .attr('stroke-width', 2)
     .attr('opacity', 0.8);
     edges = svg.selectAll('.edge')
     .attr('x1', d=>svg.sx(d.source.x))
@@ -154,7 +156,7 @@ function drawThumbnail(graph, svg){
 
     let newCircles = newNodes
     .append('circle')
-    .attr('r', 1.5)
+    .attr('r', 1)
     // .attr('fill', d3.schemeCategory10[0]);
     .attr('fill', '#666');
 
@@ -466,14 +468,12 @@ function colorEdges(groupIndex){
 
 
 function colorbar(){
-  return;
-  // TODO
   let sc = d3.scaleQuantile()
   .domain([-1,1])
   .range(diverging_colors);
 
-  let width = 100;
-  let height = 10;
+  let width = 200;
+  let height = 50;
   let svg = d3.select('body')
   .append('svg')
   .attr('width', width)
@@ -481,8 +481,13 @@ function colorbar(){
   // let width = d3.select('svg').node().getBoundingClientRect().width;
   // let height = d3.select('svg').node().getBoundingClientRect().width;
 
-  let sx = d3.scaleLinear().domain()
+  let sx = d3.scaleLinear()
+  .domain([0, diverging_colors.length])
+  .range([20, width-20]);
 
+  let sy = d3.scaleLinear()
+  .domain([0,1])
+  .range([20, height-20]);
 
   let g = svg
   .append('g')
@@ -494,8 +499,30 @@ function colorbar(){
   .append('rect')
   .attr('class', 'color-cell');
   let cells = g.selectAll('.color-cell')
+  .attr('x', (d,i)=>sx(i))
+  .attr('y', sy(0))
+  .attr('width', width/diverging_colors.length)
+  .attr('height', sy(1)-sy(0))
+  .attr('fill', d=>d);
 
-  .attr('fill', d=>d)
+  let ax = d3.axisBottom(sx)
+  .tickValues(numeric.add(0.5, d3.range(diverging_colors.length)))
+  .tickFormat(d=>{
+    if(d==0.5){
+      return 'short';
+    }else if(d==diverging_colors.length/2){ //just right
+      return '';
+    }else if (d==diverging_colors.length-0.5){
+      return 'long';
+    }else{
+      return '';
+    }
+  });
+
+  let gx = svg
+  .append('g')
+  .attr('transform', `translate(${0},${sy(1)})`)
+  .call(ax);
 
 
 }
