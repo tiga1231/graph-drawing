@@ -400,8 +400,7 @@ window.onload = function(){
       'data/random_layouts/dodecahedron_random.json',
       'data/neato_layouts/dodecahedron_neato.json',
       'data/sfdp_layouts/dodecahedron_sfdp.json',
-      'data/tsne_layouts/cube_tsne.json',
-
+      'data/tsne_layouts/dodecahedron_tsne.json',
 
       'data/gd2_layouts/dodecahedron_GD2.json',
       'data/gd2_layouts_neato_init/dodecahedron_GD2_neato_init.json',
