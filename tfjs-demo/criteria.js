@@ -43,8 +43,8 @@ function stress_loss(pdist, graphDistance, weight){
     let numerator = graphDistance.mul(weight).mul(pdist).mul(mask).sum().dataSync()[0];
     let denominator = graphDistance.pow(2).mul(weight).mul(mask).sum().dataSync()[0];
     let optimalScaling = numerator / denominator;
-    let metric = pdist
-    .div(optimalScaling)
+    let pdist_normalized = pdist.div(optimalScaling);
+    let metric = pdist_normalized
     .sub(graphDistance)
     .square()
     .mul(mask)
@@ -55,7 +55,7 @@ function stress_loss(pdist, graphDistance, weight){
     .dataSync()[0];
     // let metric = stress.dataSync()[0];
 
-    return [loss, metric];
+    return [loss, metric, pdist_normalized];
   });
 }
 
@@ -868,8 +868,9 @@ function trainOneIter(dataObj, optimizer, computeMetric=true){
       let l = center_loss(x);
       
       if(coef.stress > 0 || computeMetric){
-        let [st, m_st] = stress_loss(pdist, graphDistance, stressWeight);
+        let [st, m_st, pdist_normalized] = stress_loss(pdist, graphDistance, stressWeight);
         metrics.stress = m_st;
+        metrics.pdist = pdist_normalized.arraySync();
         if(coef.stress > 0){
           l = l.add(st.mul(coef.stress));
         }

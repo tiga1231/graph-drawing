@@ -1,3 +1,39 @@
+const diverging_colors = ['#d53e4f','#fc8d59','#fee08b','#ffffbf','#e6f598','#99d594','#3288bd'];
+
+function linspace(min, max, n=2){
+  return d3.range(n).map(i=>min + (max-min) * i/(n-1));
+}
+
+function transpose(){
+  // https://stackoverflow.com/questions/6297591/how-to-invert-transpose-the-rows-and-columns-of-an-html-table/40213981
+  $("table").each(function() {
+      var $this = $(this);
+      var newrows = [];
+      $this.find("tr").each(function(){
+          let i = 0;
+          $(this).find("th, td").each(function(){
+            i++;
+            if(newrows[i] === undefined) { newrows[i] = $("<tr></tr>"); }
+            newrows[i].append($(this));
+          });
+      });
+      $this.find("tr").remove();
+      $.each(newrows, function(){
+          $this.append(this);
+      });
+  });
+  return false;
+};
+
+
+function exportPdf(){
+  $('button').remove();
+  print();
+};
+
+
+
+
 function updateAxes(svg, sx, sy){
   let ax = d3.axisBottom(sx)
   .ticks(5)
@@ -23,11 +59,13 @@ function updateAxes(svg, sx, sy){
   .call(ay);
 }
 
-function drawGraph(graph, svg){
+
+function drawThumbnail(graph, svg){
   if(svg.sx == undefined){
     svg.sx = d3.scaleLinear();
     svg.sy = d3.scaleLinear();
   }
+
 
   function updateScales(){
     let width = svg.node().clientWidth;
@@ -80,7 +118,7 @@ function drawGraph(graph, svg){
     .attr('class', 'edge')
     .attr('fill', 'none')
     .attr('stroke', '#333')
-    .attr('stroke-width', 1)
+    .attr('stroke-width', 1.5)
     .attr('opacity', 0.8);
     edges = svg.selectAll('.edge')
     .attr('x1', d=>svg.sx(d.source.x))
@@ -116,8 +154,9 @@ function drawGraph(graph, svg){
 
     let newCircles = newNodes
     .append('circle')
-    .attr('r', 2)
-    .attr('fill', d3.schemeCategory10[0]);
+    .attr('r', 1.5)
+    // .attr('fill', d3.schemeCategory10[0]);
+    .attr('fill', '#666');
 
     let newTexts = newNodes
     .append('text')
@@ -143,7 +182,7 @@ function drawGraph(graph, svg){
   updateScales();
   updateAxes(svg, svg.sx, svg.sy);
   draw();
-}//drawGraph end
+}//drawThumbnail end
 
 
 
@@ -170,7 +209,7 @@ function drawGraph(graph, svg){
 // }
 
 
-function evaluateAndShow(graph, graphName, groupIndex, metricNames){
+function evaluateAndShow(table, graph, graphName, groupIndex, metricNames){
   let n_neighbors = graph.graphDistance
   .map((row)=>{
     return row.reduce((a,b)=>b==1?a+1:a, 0);
@@ -202,11 +241,14 @@ function evaluateAndShow(graph, graphName, groupIndex, metricNames){
   let dummy_optimizer = tf.train.momentum(0, 0, false);
   console.log(graphName);
   let {loss, metrics} = trainOneIter(dataObj, dummy_optimizer, true);
-  console.log(metrics);
-  console.log('=============');
 
-  let metricsTable = d3.select('#metrics');
-  let tableRow = metricsTable.append('tr');
+  for(let e of graph.edges){
+    let i = e.source.index;
+    let j = e.target.index;
+    e.graph_dist = graph.graphDistance[i][j];
+    e.pdist = metrics.pdist[i][j];
+  }
+  let tableRow = table.append('tr');
 
   //title
   let nameEntry = tableRow.append('td').text(graphName);
@@ -214,14 +256,15 @@ function evaluateAndShow(graph, graphName, groupIndex, metricNames){
   //graph thumbnail
   let svg = tableRow.append('td')
   .append('svg')
-  .attr('width', 50)
-  .attr('height', 50);
-  drawGraph(graph, svg);
+  .attr('width', 90)
+  .attr('height', 90)
+  .attr('class', `group-${groupIndex}`)
+  drawThumbnail(graph, svg);
 
   //metrics
   let metricList = metricNames.map(k=>({id:k, value:metrics[k]}));
   showMetrics(metricList, tableRow, groupIndex);
-  return tableRow;
+  return [tableRow, metrics];
 }
 
 
@@ -244,9 +287,8 @@ function showMetrics(metricList, row, groupIndex){
 }
 
 
-function initTableHeader(keys){
-  let metricsTable = d3.select('#metrics');
-  let headerRow = metricsTable.append('tr')
+function initTableHeader(table, keys){
+  let headerRow = table.append('tr')
   .attr('class', 'tableHeader');
   headerRow.selectAll('th')
   .data(['name', 'graph', ...keys])
@@ -286,10 +328,9 @@ function highlightBest(groupIndex, metricNames){
     }else{
       best = d3.min(data, d=>d.value);
     }
-    console.log(name, best, data);
     d3.selectAll(`.${name}-group-${groupIndex}`)
     .style('font-weight', d=>{
-      if(Math.abs(d.value - best) < 0.01){
+      if(d.value.toFixed(2) === best.toFixed(2)){
         return 800;
       }else{
         return 200;
@@ -311,9 +352,8 @@ window.onload = function(){
   'gabriel', 
   'neighbor', 
   ];
-  initTableHeader(metricNames);
 
-  let fnTuples = [
+  let fnGroups = [
     [
       'data/random_layouts_json/cycle_random.json',
       'data/neato_sfdp_layouts_json/cycle_neato.json',
@@ -376,25 +416,87 @@ window.onload = function(){
     ],
   ];
 
-  fnTuples.forEach((fnTuple, groupIndex)=>{
-    let promises = fnTuple.map(fn=>d3.json(fn));
+  colorbar();
+
+  fnGroups.forEach((fnGroup, groupIndex)=>{
+    let promises = fnGroup.map(fn=>d3.json(fn));
     Promise.all(promises)
-    .then((graphTuple)=>{
-      let rows = [];
-      zip(fnTuple, graphTuple)
+    .then((graphs)=>{
+      let table = d3.select('body')
+      .append('table');
+      initTableHeader(table, metricNames);
+
+      let sc_vmax = 0;
+      zip(fnGroup, graphs)
       .forEach((fn_graph_pair)=>{
         let [fn, graph] = fn_graph_pair;
         let graphName = fn.split('/');
         graphName = graphName[graphName.length-1].split('.')[0];
         preprocess(graph);
-        evaluateAndShow(graph, graphName, groupIndex, metricNames);
+        let [row, metrics] = evaluateAndShow(table, graph, graphName, groupIndex, metricNames);
       });
       highlightBest(groupIndex, metricNames);
+      colorEdges(groupIndex);
     });
-  })
-  
-
+  });
 };//onload end
 
 
+function colorEdges(groupIndex){
+  let graph_count = d3.selectAll(`.group-0`)._groups[0].length;
+  let edges = d3.selectAll(`.group-${groupIndex}`).selectAll('.edge');
+  let data = edges.data();
+  let edge_count = data.length / graph_count;
+
+  let vmax = d3.max(data.slice(edge_count), d=>Math.abs( d.pdist - d.graph_dist)) + 0.2;
+  console.log(vmax);
+
+  // let sc = d3.scaleLinear()
+  // .domain(linspace(-vmax, vmax, diverging_colors.length))
+  // .range(diverging_colors);
+
+  let sc = d3.scaleQuantile()
+  .domain([-vmax, vmax])
+  .range(diverging_colors);
+
+  edges
+  .attr('stroke', d=>sc(d.pdist - d.graph_dist));
+
+}
+
+
+function colorbar(){
+  return;
+  // TODO
+  let sc = d3.scaleQuantile()
+  .domain([-1,1])
+  .range(diverging_colors);
+
+  let width = 100;
+  let height = 10;
+  let svg = d3.select('body')
+  .append('svg')
+  .attr('width', width)
+  .attr('height', height);
+  // let width = d3.select('svg').node().getBoundingClientRect().width;
+  // let height = d3.select('svg').node().getBoundingClientRect().width;
+
+  let sx = d3.scaleLinear().domain()
+
+
+  let g = svg
+  .append('g')
+  .attr('class', 'colorbar');
+
+  g.selectAll('.color-cell')
+  .data(diverging_colors)
+  .enter()
+  .append('rect')
+  .attr('class', 'color-cell');
+  let cells = g.selectAll('.color-cell')
+
+  .attr('fill', d=>d)
+
+
+}
 

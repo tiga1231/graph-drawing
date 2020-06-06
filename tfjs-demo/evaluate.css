@@ -27,6 +27,10 @@ g.xAxis, g.yAxis{
   display: none;
 }
 
+table{
+  margin-bottom: 20px;
+}
+
 
  
 
