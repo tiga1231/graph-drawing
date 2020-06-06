@@ -33,29 +33,21 @@ function pairwise_distance(x){
 
 function stress_loss(pdist, graphDistance, weight){
   return tf.tidy(()=>{
-    let stress = pdist.sub(graphDistance).square().mul(weight).sum();
-    let loss = stress.div(4);
-
-    //metric
     let n = pdist.shape[0];
     let mask = tf.scalar(1.0).sub(tf.eye(n));
+    let numerator = graphDistance.mul(weight).mul(pdist).mul(mask).sum();
+    let denominator = graphDistance.pow(2).mul(weight).mul(mask).sum();
+    let optimalScaling = numerator.div( denominator );
 
-    let numerator = graphDistance.mul(weight).mul(pdist).mul(mask).sum().dataSync()[0];
-    let denominator = graphDistance.pow(2).mul(weight).mul(mask).sum().dataSync()[0];
-    let optimalScaling = numerator / denominator;
+    let stress = pdist.sub(graphDistance).square().mul(weight).sum().div(2);
+    let loss = stress.div(2);
+
+    //metric
     let pdist_normalized = pdist.div(optimalScaling);
-    let metric = pdist_normalized
-    .sub(graphDistance)
-    .square()
-    .mul(mask)
-    .mul(weight)
-    .sum()
-    .div(2)
-    // .div(n*(n-1))
-    .dataSync()[0];
-    // let metric = stress.dataSync()[0];
+    let metric = pdist_normalized.sub(graphDistance).square().mul(weight).sum().div(2);
+    metric = metric.dataSync()[0];
 
-    return [loss, metric, pdist_normalized];
+    return [loss, metric, pdist_normalized.arraySync()];
   });
 }
 
@@ -870,7 +862,7 @@ function trainOneIter(dataObj, optimizer, computeMetric=true){
       if(coef.stress > 0 || computeMetric){
         let [st, m_st, pdist_normalized] = stress_loss(pdist, graphDistance, stressWeight);
         metrics.stress = m_st;
-        metrics.pdist = pdist_normalized.arraySync();
+        metrics.pdist = pdist_normalized;
         if(coef.stress > 0){
           l = l.add(st.mul(coef.stress));
         }

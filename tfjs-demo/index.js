@@ -80,33 +80,42 @@ window.onload = function(){
   let resetButton = d3.select('#reset');
   let downloadButton = d3.select('#download');
 
+  let initOption = d3.select('#initOption');
+  let initMode = initOption.node().value;
+  initOption.on('change', function(){
+    initMode = d3.select(this).node().value;
+  });
   updateSvgSize(svg_loss, svg_graph);
   window.addEventListener('resize', ()=>{updateSvgSize(svg_loss, svg_graph)});
+
 
   function loadGraph(fn){
     d3.json(fn).then((graph)=>{
       window.graph = graph;
+
       let x;
       function reset(){
         console.log('reset');
-        x = tf.variable(
-          tf.randomUniform([graph.nodes.length,2], -1, 1)
-        );
+        if(initMode == 'neato' && graph.initPosition_neato !== undefined){
+          x = tf.variable(tf.tensor2d(graph.initPosition_neato).div(100));
+        }else if(initMode == 'sfdp' && graph.initPosition_sfdp !== undefined){
+          x = tf.variable(tf.tensor2d(graph.initPosition_sfdp).div(100));
+        }else if(initMode == 'tsne' && graph.initPosition_tsne !== undefined){
+          x = tf.variable(tf.tensor2d(graph.initPosition_tsne));
+        }else if(initMode == 'random'){
+          x = tf.variable(
+            tf.randomUniform([graph.nodes.length,2], -1, 1)
+          );
+        }
         boundaries = undefined;
         historicalWorst = {};
         if(lrSlider.on('input')){
           lrSlider.on('input')(lr0);
         }
-
       }
-
-      if(graph.initPositions){
-        x = tf.variable(tf.tensor2d(graph.initPositions));
-      }else{
-        reset();
-        optimizers[0] = tf.train.momentum(lr, momentum, false);
-      }
-
+      
+      reset();
+      optimizers[0] = tf.train.momentum(lr, momentum, false);
       preprocess(graph, x.arraySync());
 
       let n_neighbors = graph.graphDistance
@@ -134,7 +143,6 @@ window.onload = function(){
         edgePairs,
         neighbors,
         edges,
-        // desiredArea: desiredAreaSlider.node()===null? 0.0: +desiredAreaSlider.node().value,
       };
       window.dataObj = dataObj;
 
@@ -224,6 +232,8 @@ window.onload = function(){
         cancelAnimationFrame(dataObj.animId);
         loadGraph(fn);
       });
+
+      
 
       lrSlider.on('input', function(value){
         window.lr = value || Math.exp(+d3.select(this).node().value);
