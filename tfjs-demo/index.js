@@ -70,7 +70,9 @@ window.onload = function(){
   window.metrics = metrics;
   let animId = 0;
 
-  let svg_loss = d3.select('#loss');
+  let svg_loss = d3.select('#loss')
+  .style('background-color', '#f3f3f3');
+
   let svg_graph = d3.select('#graph');
 
   let svg_metrics = d3.selectAll('.metric');
@@ -204,26 +206,32 @@ window.onload = function(){
       });
 
       downloadButton.on('click', ()=>{
-        let res = {};
-        res.nodes = graph.nodes;
-        res.edges = graph.edges.map(d=>({
-          source: d.source.id, 
-          target: d.target.id,
-        }));
-        res.coef = coef;
-        res.optimizer = {
-          lr: optimizers[0].learningRate, 
-          momentum: optimizers[0].momentum
-        };
-        res.graphDistance = graph.graphDistance;
-        res.weight = graph.weight;
-        let res_json = JSON.stringify(res, null, 2);
-        let file_name = `${graphTypeSelect.node().value}.json`;
-        let dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(res_json);
-        var anchor = document.getElementById('download-json');
-        anchor.setAttribute('href', dataStr);
-        anchor.setAttribute('download', file_name);
-        anchor.click();
+
+        //download json
+        // let res = {};
+        // res.nodes = graph.nodes;
+        // res.edges = graph.edges.map(d=>({
+        //   source: d.source.id, 
+        //   target: d.target.id,
+        // }));
+        // res.coef = coef;
+        // res.optimizer = {
+        //   lr: optimizers[0].learningRate, 
+        //   momentum: optimizers[0].momentum
+        // };
+        // res.graphDistance = graph.graphDistance;
+        // res.weight = graph.weight;
+        // let res_json = JSON.stringify(res, null, 2);
+        // let file_name = `${graphTypeSelect.node().value}.json`;
+        // let dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(res_json);
+        // var anchor = document.getElementById('download-json');
+        // anchor.setAttribute('href', dataStr);
+        // anchor.setAttribute('download', file_name);
+        // anchor.click();
+        
+
+        // download PNG:
+        downloadPNG();
       });
 
       graphTypeSelect.on('change', function(){
@@ -385,7 +393,7 @@ function svg2image(xml) {
   return image;
 }
 
-function downloadSvg(){
+function downloadPNG(){
   let svg = d3.select('#graph');
   styles(svg.node());
   setAttributes(svg.node());
@@ -403,14 +411,18 @@ function downloadSvg(){
 
   setTimeout(()=>{
     context.drawImage(image, 0, 0);
-  }, 1000);
+    console.log(canvas.node().toDataURL('image/png'));
+    var a = d3.select('body').append('a');
+    a.node().download = "image.png";
+    a.node().href = canvas.node().toDataURL('image/png');
+    a.node().click();
+
+    canvas.remove();
+    a.remove();
+  }, 10);
   
 
-  // console.log(canvas.node().toDataURL('image/png'));
-  // var a = d3.select('body').append('a');
-  // a.node().download = "image.png";
-  // a.node().href = canvas.node().toDataURL('image/png');
-  // a.node().click();
+  
 
   return [context, image];
 }

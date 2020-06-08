@@ -23,12 +23,16 @@ body{
 svg {
   margin-bottom: 10px;
   border-radius: 10px;
-  background-color: var(--svg-background);
+  /*background-color: var(--svg-background);*/
+  background-color: #f3f3f3;
 }
 
 
 svg text{
-  fill: var(--axis-color);
+  /*fill: var(--axis-color);*/
+  fill: #555;
+  font-family: "Roboto", sans-serif;
+  font-weight: 300;
 }
 
 
@@ -41,7 +45,8 @@ svg text, .fas{
 
 
 svg line, svg path.domain{
-  stroke: var(--axis-color);
+  /*stroke: var(--axis-color);*/
+  stroke: #555;
 }
 
 
