@@ -210,6 +210,41 @@ function drawThumbnail(graph, svg){
 //   });
 // }
 
+function evaluate(graph){
+  let n_neighbors = graph.graphDistance
+  .map((row)=>{
+    return row.reduce((a,b)=>b==1?a+1:a, 0);
+  });
+  let adj = graph.graphDistance.map(row=>row.map(d=>d==1 ? 1.0 : 0.0));
+  adj = tf.tensor2d(adj);
+  let graphDistance = tf.tensor2d(graph.graphDistance);
+  let stressWeight = tf.tensor2d(graph.weight);
+  let edgePairs = getEdgePairs(graph);
+  let neighbors = graph2neighbors(graph);
+  let edges = graph.edges.map(d=>[d.source.index, d.target.index]);
+  let sampleSize = 5;
+  let x = graph.nodes.map(d=>[d.x, d.y]);
+  x = tf.variable(tf.tensor2d(x));
+
+  let dataObj = {
+    x, 
+    coef: {},
+    graphDistance, 
+    adj,
+    stressWeight,
+    graph,
+    n_neighbors,
+    edgePairs,
+    neighbors,
+    edges,
+  };
+
+  let dummy_optimizer = tf.train.momentum(0, 0, false);
+  console.log(graphName);
+  let {loss, metrics} = trainOneIter(dataObj, dummy_optimizer, true);
+  return metrics;
+}
+
 
 function evaluateAndShow(table, graph, graphName, groupIndex, metricNames){
   let n_neighbors = graph.graphDistance
@@ -361,7 +396,6 @@ window.onload = function(){
       'data/neato_layouts/cycle_neato.json',
       'data/sfdp_layouts/cycle_sfdp.json',
       // 'data/tsne_layouts/cycle_tsne.json',
-
       'data/gd2_layouts/cycle_GD2.json',
       'data/gd2_layouts_neato_init/cycle_GD2_neato_init.json',
       'data/gd2_layouts_sfdp_init/cycle_GD2_sfdp_init.json',
@@ -371,114 +405,111 @@ window.onload = function(){
       'data/neato_layouts/bipartite_neato.json',
       'data/sfdp_layouts/bipartite_sfdp.json',
       // 'data/tsne_layouts/bipartite_tsne.json',
-
       'data/gd2_layouts/bipartite_GD2.json',
       'data/gd2_layouts_neato_init/bipartite_GD2_neato_init.json',
       'data/gd2_layouts_sfdp_init/bipartite_GD2_sfdp_init.json',
     ],
-    [
-      'data/random_layouts/spx_teaser_random.json',
-      'data/neato_layouts/spx_teaser_neato.json',
-      'data/sfdp_layouts/spx_teaser_sfdp.json',
-      // 'data/tsne_layouts/spx_teaser_tsne.json',
-      
-      'data/gd2_layouts/spx_teaser_GD2.json',
-      'data/gd2_layouts_neato_init/spx_teaser_GD2_neato_init.json',
-      'data/gd2_layouts_sfdp_init/spx_teaser_GD2_sfdp_init.json',
-    ],
-    [
-      'data/random_layouts/cube_random.json',
-      'data/neato_layouts/cube_neato.json',
-      'data/sfdp_layouts/cube_sfdp.json',
-      // 'data/tsne_layouts/cube_tsne.json',
-
-      'data/gd2_layouts/cube_GD2.json',
-      'data/gd2_layouts_neato_init/cube_GD2_neato_init.json',
-      'data/gd2_layouts_sfdp_init/cube_GD2_sfdp_init.json',
-    ],
-    [
-      'data/random_layouts/dodecahedron_random.json',
-      'data/neato_layouts/dodecahedron_neato.json',
-      'data/sfdp_layouts/dodecahedron_sfdp.json',
-      // 'data/tsne_layouts/dodecahedron_tsne.json',
-
-      'data/gd2_layouts/dodecahedron_GD2.json',
-      'data/gd2_layouts_neato_init/dodecahedron_GD2_neato_init.json',
-      'data/gd2_layouts_sfdp_init/dodecahedron_GD2_sfdp_init.json',
-    ],
-    [
-      'data/random_layouts/symmetric_random.json',
-      'data/neato_layouts/symmetric_neato.json',
-      'data/sfdp_layouts/symmetric_sfdp.json',
-      // 'data/tsne_layouts/symmetric_tsne.json',
-
-      'data/gd2_layouts/symmetric_GD2.json',
-      'data/gd2_layouts_neato_init/symmetric_GD2_neato_init.json',
-      'data/gd2_layouts_sfdp_init/symmetric_GD2_sfdp_init.json',
-    ],
-    [
-      'data/random_layouts/tree_random.json',
-      'data/neato_layouts/tree_neato.json',
-      'data/sfdp_layouts/tree_sfdp.json',
-      // 'data/tsne_layouts/tree_tsne.json',
-
-      'data/gd2_layouts/tree_GD2.json',
-      'data/gd2_layouts_neato_init/tree_GD2_neato_init.json',
-      'data/gd2_layouts_sfdp_init/tree_GD2_sfdp_init.json',
-    ],
-    [
-      'data/random_layouts/block_random.json',
-      'data/neato_layouts/block_neato.json',
-      'data/sfdp_layouts/block_sfdp.json',
-      // 'data/tsne_layouts/block_tsne.json',
-
-      'data/gd2_layouts/block_GD2.json',
-      'data/gd2_layouts_neato_init/block_GD2_neato_init.json',
-      'data/gd2_layouts_sfdp_init/block_GD2_sfdp_init.json',
-    ],
-    [
-      'data/random_layouts/grid_random.json',
-      'data/neato_layouts/grid_neato.json',
-      'data/sfdp_layouts/grid_sfdp.json',
-      // 'data/tsne_layouts/grid_tsne.json',
-
-      'data/gd2_layouts/grid_GD2.json',
-      'data/gd2_layouts_neato_init/grid_GD2_neato_init.json',
-      'data/gd2_layouts_sfdp_init/grid_GD2_sfdp_init.json',
-    ],
-    [
-      'data/random_layouts/complete_random.json',
-      'data/neato_layouts/complete_neato.json',
-      'data/sfdp_layouts/complete_sfdp.json',
-      // 'data/tsne_layouts/complete_tsne.json',
-
-      'data/gd2_layouts/complete_GD2.json',
-      'data/gd2_layouts_neato_init/complete_GD2_neato_init.json',
-      'data/gd2_layouts_sfdp_init/complete_GD2_sfdp_init.json',
-    ],
+    // [
+    //   'data/random_layouts/spx_teaser_random.json',
+    //   'data/neato_layouts/spx_teaser_neato.json',
+    //   'data/sfdp_layouts/spx_teaser_sfdp.json',
+    //   // 'data/tsne_layouts/spx_teaser_tsne.json',
+    //   'data/gd2_layouts/spx_teaser_GD2.json',
+    //   'data/gd2_layouts_neato_init/spx_teaser_GD2_neato_init.json',
+    //   'data/gd2_layouts_sfdp_init/spx_teaser_GD2_sfdp_init.json',
+    // ],
+    // [
+    //   'data/random_layouts/cube_random.json',
+    //   'data/neato_layouts/cube_neato.json',
+    //   'data/sfdp_layouts/cube_sfdp.json',
+    //   // 'data/tsne_layouts/cube_tsne.json',
+    //   'data/gd2_layouts/cube_GD2.json',
+    //   'data/gd2_layouts_neato_init/cube_GD2_neato_init.json',
+    //   'data/gd2_layouts_sfdp_init/cube_GD2_sfdp_init.json',
+    // ],
+    // [
+    //   'data/random_layouts/dodecahedron_random.json',
+    //   'data/neato_layouts/dodecahedron_neato.json',
+    //   'data/sfdp_layouts/dodecahedron_sfdp.json',
+    //   // 'data/tsne_layouts/dodecahedron_tsne.json',
+    //   'data/gd2_layouts/dodecahedron_GD2.json',
+    //   'data/gd2_layouts_neato_init/dodecahedron_GD2_neato_init.json',
+    //   'data/gd2_layouts_sfdp_init/dodecahedron_GD2_sfdp_init.json',
+    // ],
+    // [
+    //   'data/random_layouts/nonsymmetric_random.json',
+    //   'data/neato_layouts/nonsymmetric_neato.json',
+    //   'data/sfdp_layouts/nonsymmetric_sfdp.json',
+    //   // 'data/tsne_layouts/nonsymmetric_tsne.json',
+    //   'data/gd2_layouts/nonsymmetric_GD2.json',
+    //   'data/gd2_layouts_neato_init/nonsymmetric_GD2_neato_init.json',
+    //   'data/gd2_layouts_sfdp_init/nonsymmetric_GD2_sfdp_init.json',
+    // ],
+    // [
+    //   'data/random_layouts/tree_random.json',
+    //   'data/neato_layouts/tree_neato.json',
+    //   'data/sfdp_layouts/tree_sfdp.json',
+    //   // 'data/tsne_layouts/tree_tsne.json',
+    //   'data/gd2_layouts/tree_GD2.json',
+    //   'data/gd2_layouts_neato_init/tree_GD2_neato_init.json',
+    //   'data/gd2_layouts_sfdp_init/tree_GD2_sfdp_init.json',
+    // ],
+    // [
+    //   'data/random_layouts/block_random.json',
+    //   'data/neato_layouts/block_neato.json',
+    //   'data/sfdp_layouts/block_sfdp.json',
+    //   // 'data/tsne_layouts/block_tsne.json',
+    //   'data/gd2_layouts/block_GD2.json',
+    //   'data/gd2_layouts_neato_init/block_GD2_neato_init.json',
+    //   'data/gd2_layouts_sfdp_init/block_GD2_sfdp_init.json',
+    // ],
+    // [
+    //   'data/random_layouts/grid_random.json',
+    //   'data/neato_layouts/grid_neato.json',
+    //   'data/sfdp_layouts/grid_sfdp.json',
+    //   // 'data/tsne_layouts/grid_tsne.json',
+    //   'data/gd2_layouts/grid_GD2.json',
+    //   'data/gd2_layouts_neato_init/grid_GD2_neato_init.json',
+    //   'data/gd2_layouts_sfdp_init/grid_GD2_sfdp_init.json',
+    // ],
+    // [
+    //   'data/random_layouts/complete_random.json',
+    //   'data/neato_layouts/complete_neato.json',
+    //   'data/sfdp_layouts/complete_sfdp.json',
+    //   // 'data/tsne_layouts/complete_tsne.json',
+    //   'data/gd2_layouts/complete_GD2.json',
+    //   'data/gd2_layouts_neato_init/complete_GD2_neato_init.json',
+    //   'data/gd2_layouts_sfdp_init/complete_GD2_sfdp_init.json',
+    // ],
   ];
 
   colorbar();
-  fnGroups.forEach((fnGroup, groupIndex)=>{
-    let promises = fnGroup.map(fn=>d3.json(fn));
-    Promise.all(promises)
-    .then((graphs)=>{
-      let table = d3.select('body')
-      .append('table');
-      initTableHeader(table, metricNames);
 
-      let sc_vmax = 0;
-      zip(fnGroup, graphs)
-      .forEach((fn_graph_pair)=>{
-        let [fn, graph] = fn_graph_pair;
-        let graphName = fn.split('/');
-        graphName = graphName[graphName.length-1].split('.')[0];
-        preprocess(graph);
-        let [row, metrics] = evaluateAndShow(table, graph, graphName, groupIndex, metricNames);
-      });
-      highlightBest(groupIndex, metricNames);
-      colorEdges(groupIndex);
+  let promises = fnGroup.flat().map(fn=>d3.json(fn));
+  Promise.all(promises)
+  .then((graphs)=>{
+    graphs.forEach(graph=>{
+      let metric = evaluate(graph);
+      console.log(metric);
+
     });
+
+    // let table = d3.select('body')
+    // .append('table');
+
+    // initTableHeader(table, metricNames);
+
+    // let sc_vmax = 0;
+    // zip(fnGroup, graphs)
+    // .forEach((fn_graph_pair)=>{
+    //   let [fn, graph] = fn_graph_pair;
+    //   let graphName = fn.split('/');
+    //   graphName = graphName[graphName.length-1].split('.')[0];
+    //   preprocess(graph);
+    //   let [row, metrics] = evaluateAndShow(table, graph, graphName, groupIndex, metricNames);
+    // });
+    // highlightBest(groupIndex, metricNames);
+    // colorEdges(groupIndex);
   });
 };//onload end
 

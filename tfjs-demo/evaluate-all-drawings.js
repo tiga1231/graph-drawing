@@ -210,8 +210,7 @@ function drawThumbnail(graph, svg){
 //   });
 // }
 
-
-function evaluateAndShow(table, graph, graphName, groupIndex, metricNames){
+function evaluate(graph){
   let n_neighbors = graph.graphDistance
   .map((row)=>{
     return row.reduce((a,b)=>b==1?a+1:a, 0);
@@ -241,7 +240,41 @@ function evaluateAndShow(table, graph, graphName, groupIndex, metricNames){
   };
 
   let dummy_optimizer = tf.train.momentum(0, 0, false);
-  console.log(graphName);
+  let {loss, metrics} = trainOneIter(dataObj, dummy_optimizer, true);
+  return metrics;
+}
+
+
+function evaluateAndShow(graph, tableRow){
+  let n_neighbors = graph.graphDistance
+  .map((row)=>{
+    return row.reduce((a,b)=>b==1?a+1:a, 0);
+  });
+  let adj = graph.graphDistance.map(row=>row.map(d=>d==1 ? 1.0 : 0.0));
+  adj = tf.tensor2d(adj);
+  let graphDistance = tf.tensor2d(graph.graphDistance);
+  let stressWeight = tf.tensor2d(graph.weight);
+  let edgePairs = getEdgePairs(graph);
+  let neighbors = graph2neighbors(graph);
+  let edges = graph.edges.map(d=>[d.source.index, d.target.index]);
+  let sampleSize = 5;
+  let x = graph.nodes.map(d=>[d.x, d.y]);
+  x = tf.variable(tf.tensor2d(x));
+
+  let dataObj = {
+    x, 
+    coef: {},
+    graphDistance, 
+    adj,
+    stressWeight,
+    graph,
+    n_neighbors,
+    edgePairs,
+    neighbors,
+    edges,
+  };
+
+  let dummy_optimizer = tf.train.momentum(0, 0, false);
   let {loss, metrics} = trainOneIter(dataObj, dummy_optimizer, true);
 
   for(let e of graph.edges){
@@ -250,22 +283,20 @@ function evaluateAndShow(table, graph, graphName, groupIndex, metricNames){
     e.graph_dist = graph.graphDistance[i][j];
     e.pdist = metrics.pdist[i][j];
   }
-  let tableRow = table.append('tr');
 
   //title
-  let nameEntry = tableRow.append('td').text(graphName);
 
   //graph thumbnail
   let svg = tableRow.append('td')
   .append('svg')
   .attr('width', 90)
   .attr('height', 90)
-  .attr('class', `group-${groupIndex}`)
+  // .attr('class', `group-${groupIndex}`)
   drawThumbnail(graph, svg);
 
-  //metrics
-  let metricList = metricNames.map(k=>({id:k, value:metrics[k]}));
-  showMetrics(metricList, tableRow, groupIndex);
+  // //metrics
+  // let metricList = metricNames.map(k=>({id:k, value:metrics[k]}));
+  // showMetrics(metricList, tableRow, groupIndex);
   return [tableRow, metrics];
 }
 
@@ -293,7 +324,7 @@ function initTableHeader(table, keys){
   let headerRow = table.append('tr')
   .attr('class', 'tableHeader');
   headerRow.selectAll('th')
-  .data(['name', 'graph', ...keys])
+  .data(keys)
   .enter()
   .append('th');
 
@@ -360,137 +391,186 @@ window.onload = function(){
       'data/random_layouts/cycle_random.json',
       'data/neato_layouts/cycle_neato.json',
       'data/sfdp_layouts/cycle_sfdp.json',
-      // 'data/tsne_layouts/cycle_tsne.json',
 
-      'data/gd2_layouts/cycle_GD2.json',
-      'data/gd2_layouts_neato_init/cycle_GD2_neato_init.json',
-      'data/gd2_layouts_sfdp_init/cycle_GD2_sfdp_init.json',
+      'data/gd2_layouts_stress/cycle.json',
+      'data/gs2_layouts_aspect_ratio/cycle.json',
+      'data/gd2_crossing_angle/cycle.json',
+      'data/gd2_layouts_angular_resolution/cycle.json',
+
+      // 'data/gd2_layouts/cycle_GD2.json',
+      // 'data/gd2_layouts_neato_init/cycle_GD2_neato_init.json',
+      // 'data/gd2_layouts_sfdp_init/cycle_GD2_sfdp_init.json',
     ],
     [
       'data/random_layouts/bipartite_random.json',
       'data/neato_layouts/bipartite_neato.json',
       'data/sfdp_layouts/bipartite_sfdp.json',
-      // 'data/tsne_layouts/bipartite_tsne.json',
 
-      'data/gd2_layouts/bipartite_GD2.json',
-      'data/gd2_layouts_neato_init/bipartite_GD2_neato_init.json',
-      'data/gd2_layouts_sfdp_init/bipartite_GD2_sfdp_init.json',
+      'data/gd2_layouts_stress/bipartite.json',
+      'data/gs2_layouts_aspect_ratio/bipartite.json',
+      'data/gd2_crossing_angle/bipartite.json',
+      'data/gd2_layouts_angular_resolution/bipartite.json',
+
+      // 'data/gd2_layouts/bipartite_GD2.json',
+      // 'data/gd2_layouts_neato_init/bipartite_GD2_neato_init.json',
+      // 'data/gd2_layouts_sfdp_init/bipartite_GD2_sfdp_init.json',
     ],
     [
       'data/random_layouts/spx_teaser_random.json',
       'data/neato_layouts/spx_teaser_neato.json',
       'data/sfdp_layouts/spx_teaser_sfdp.json',
-      // 'data/tsne_layouts/spx_teaser_tsne.json',
-      
-      'data/gd2_layouts/spx_teaser_GD2.json',
-      'data/gd2_layouts_neato_init/spx_teaser_GD2_neato_init.json',
-      'data/gd2_layouts_sfdp_init/spx_teaser_GD2_sfdp_init.json',
+
+      'data/gd2_layouts_stress/spx_teaser.json',
+      'data/gs2_layouts_aspect_ratio/spx_teaser.json',
+      'data/gd2_crossing_angle/spx_teaser.json',
+      'data/gd2_layouts_angular_resolution/spx_teaser.json',
+
+      // 'data/gd2_layouts/spx_teaser_GD2.json',
+      // 'data/gd2_layouts_neato_init/spx_teaser_GD2_neato_init.json',
+      // 'data/gd2_layouts_sfdp_init/spx_teaser_GD2_sfdp_init.json',
     ],
     [
       'data/random_layouts/cube_random.json',
       'data/neato_layouts/cube_neato.json',
       'data/sfdp_layouts/cube_sfdp.json',
-      // 'data/tsne_layouts/cube_tsne.json',
 
-      'data/gd2_layouts/cube_GD2.json',
-      'data/gd2_layouts_neato_init/cube_GD2_neato_init.json',
-      'data/gd2_layouts_sfdp_init/cube_GD2_sfdp_init.json',
+      'data/gd2_layouts_stress/cube.json',
+      'data/gs2_layouts_aspect_ratio/cube.json',
+      'data/gd2_crossing_angle/cube.json',
+      'data/gd2_layouts_angular_resolution/cube.json',
+
+      // 'data/gd2_layouts/cube_GD2.json',
+      // 'data/gd2_layouts_neato_init/cube_GD2_neato_init.json',
+      // 'data/gd2_layouts_sfdp_init/cube_GD2_sfdp_init.json',
     ],
     [
       'data/random_layouts/dodecahedron_random.json',
       'data/neato_layouts/dodecahedron_neato.json',
       'data/sfdp_layouts/dodecahedron_sfdp.json',
-      // 'data/tsne_layouts/dodecahedron_tsne.json',
 
-      'data/gd2_layouts/dodecahedron_GD2.json',
-      'data/gd2_layouts_neato_init/dodecahedron_GD2_neato_init.json',
-      'data/gd2_layouts_sfdp_init/dodecahedron_GD2_sfdp_init.json',
+      'data/gd2_layouts_stress/dodecahedron.json',
+      'data/gs2_layouts_aspect_ratio/dodecahedron.json',
+      'data/gd2_crossing_angle/dodecahedron.json',
+      'data/gd2_layouts_angular_resolution/dodecahedron.json',
+
+      // 'data/gd2_layouts/dodecahedron_GD2.json',
+      // 'data/gd2_layouts_neato_init/dodecahedron_GD2_neato_init.json',
+      // 'data/gd2_layouts_sfdp_init/dodecahedron_GD2_sfdp_init.json',
     ],
     [
       'data/random_layouts/symmetric_random.json',
       'data/neato_layouts/symmetric_neato.json',
       'data/sfdp_layouts/symmetric_sfdp.json',
-      // 'data/tsne_layouts/symmetric_tsne.json',
 
-      'data/gd2_layouts/symmetric_GD2.json',
-      'data/gd2_layouts_neato_init/symmetric_GD2_neato_init.json',
-      'data/gd2_layouts_sfdp_init/symmetric_GD2_sfdp_init.json',
+      'data/gd2_layouts_stress/symmetric.json',
+      'data/gs2_layouts_aspect_ratio/symmetric.json',
+      'data/gd2_crossing_angle/symmetric.json',
+      'data/gd2_layouts_angular_resolution/symmetric.json',
+
+      // 'data/gd2_layouts/symmetric_GD2.json',
+      // 'data/gd2_layouts_neato_init/symmetric_GD2_neato_init.json',
+      // 'data/gd2_layouts_sfdp_init/symmetric_GD2_sfdp_init.json',
     ],
     [
       'data/random_layouts/tree_random.json',
       'data/neato_layouts/tree_neato.json',
       'data/sfdp_layouts/tree_sfdp.json',
-      // 'data/tsne_layouts/tree_tsne.json',
 
-      'data/gd2_layouts/tree_GD2.json',
-      'data/gd2_layouts_neato_init/tree_GD2_neato_init.json',
-      'data/gd2_layouts_sfdp_init/tree_GD2_sfdp_init.json',
+      'data/gd2_layouts_stress/tree.json',
+      'data/gs2_layouts_aspect_ratio/tree.json',
+      'data/gd2_crossing_angle/tree.json',
+      'data/gd2_layouts_angular_resolution/tree.json',
+      // 'data/gd2_layouts/tree_GD2.json',
+      // 'data/gd2_layouts_neato_init/tree_GD2_neato_init.json',
+      // 'data/gd2_layouts_sfdp_init/tree_GD2_sfdp_init.json',
     ],
     [
       'data/random_layouts/block_random.json',
       'data/neato_layouts/block_neato.json',
       'data/sfdp_layouts/block_sfdp.json',
-      // 'data/tsne_layouts/block_tsne.json',
 
-      'data/gd2_layouts/block_GD2.json',
-      'data/gd2_layouts_neato_init/block_GD2_neato_init.json',
-      'data/gd2_layouts_sfdp_init/block_GD2_sfdp_init.json',
+      'data/gd2_layouts_stress/block.json',
+      'data/gs2_layouts_aspect_ratio/block.json',
+      'data/gd2_crossing_angle/block.json',
+      'data/gd2_layouts_angular_resolution/block.json',
+
+      // 'data/gd2_layouts/block_GD2.json',
+      // 'data/gd2_layouts_neato_init/block_GD2_neato_init.json',
+      // 'data/gd2_layouts_sfdp_init/block_GD2_sfdp_init.json',
     ],
     [
       'data/random_layouts/grid_random.json',
       'data/neato_layouts/grid_neato.json',
       'data/sfdp_layouts/grid_sfdp.json',
-      // 'data/tsne_layouts/grid_tsne.json',
 
-      'data/gd2_layouts/grid_GD2.json',
-      'data/gd2_layouts_neato_init/grid_GD2_neato_init.json',
-      'data/gd2_layouts_sfdp_init/grid_GD2_sfdp_init.json',
+      'data/gd2_layouts_stress/grid.json',
+      'data/gs2_layouts_aspect_ratio/grid.json',
+      'data/gd2_crossing_angle/grid.json',
+      'data/gd2_layouts_angular_resolution/grid.json',
+
+      // 'data/gd2_layouts/grid_GD2.json',
+      // 'data/gd2_layouts_neato_init/grid_GD2_neato_init.json',
+      // 'data/gd2_layouts_sfdp_init/grid_GD2_sfdp_init.json',
     ],
     [
       'data/random_layouts/complete_random.json',
       'data/neato_layouts/complete_neato.json',
       'data/sfdp_layouts/complete_sfdp.json',
-      // 'data/tsne_layouts/complete_tsne.json',
 
-      'data/gd2_layouts/complete_GD2.json',
-      'data/gd2_layouts_neato_init/complete_GD2_neato_init.json',
-      'data/gd2_layouts_sfdp_init/complete_GD2_sfdp_init.json',
+      'data/gd2_layouts_stress/complete.json',
+      'data/gs2_layouts_aspect_ratio/complete.json',
+      'data/gd2_crossing_angle/complete.json',
+      'data/gd2_layouts_angular_resolution/complete.json',
+
+      // 'data/gd2_layouts/complete_GD2.json',
+      // 'data/gd2_layouts_neato_init/complete_GD2_neato_init.json',
+      // 'data/gd2_layouts_sfdp_init/complete_GD2_sfdp_init.json',
     ],
   ];
 
   colorbar();
+  let table = d3.select('body')
+  .append('table');
+  initTableHeader(table, ['graph', 'random', 'neato', 'sfdp', 'GD2_ST', 'GD2_AR', 'GD2_CAM', 'GD2_ANR']);
+
   fnGroups.forEach((fnGroup, groupIndex)=>{
+    
     let promises = fnGroup.map(fn=>d3.json(fn));
     Promise.all(promises)
     .then((graphs)=>{
-      let table = d3.select('body')
-      .append('table');
-      initTableHeader(table, metricNames);
-
       let sc_vmax = 0;
+      let tableRow = table.append('tr');
+
+      let graphName = fnGroup[0].split('/');
+      graphName = graphName[graphName.length-1].split('.')[0];
+      graphName = graphName.split('_').slice(0,-1).join('_');
+      console.log(graphName);
+      //title
+      let nameEntry = tableRow
+      .append('td')
+      .text(`${graphName}, |V|=${graphs[0].nodes.length}, |E|=${graphs[0].edges.length}`);
+
       zip(fnGroup, graphs)
       .forEach((fn_graph_pair)=>{
         let [fn, graph] = fn_graph_pair;
-        let graphName = fn.split('/');
-        graphName = graphName[graphName.length-1].split('.')[0];
         preprocess(graph);
-        let [row, metrics] = evaluateAndShow(table, graph, graphName, groupIndex, metricNames);
+        let [row, metrics] = evaluateAndShow(graph, tableRow);
       });
-      highlightBest(groupIndex, metricNames);
-      colorEdges(groupIndex);
+      colorEdges(tableRow);
     });
   });
+
+
 };//onload end
 
 
-function colorEdges(groupIndex){
-  let graph_count = d3.selectAll(`.group-0`)._groups[0].length;
-  let edges = d3.selectAll(`.group-${groupIndex}`).selectAll('.edge');
+function colorEdges(row){
+  let graph_count = row.selectAll('svg')._groups[0].length;
+  let edges = row.selectAll('.edge');
   let data = edges.data();
   let edge_count = data.length / graph_count;
 
   let vmax = d3.max(data.slice(edge_count), d=>Math.abs( d.pdist - d.graph_dist)) + 0.2;
-  console.log(vmax);
 
   // let sc = d3.scaleLinear()
   // .domain(linspace(-vmax, vmax, diverging_colors.length))

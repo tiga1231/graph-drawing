@@ -268,6 +268,7 @@ function drawGraph(svg, graph){
     .data(window.graph.nodes)
     .exit()
     .remove();
+
     let newNodes = svg.selectAll('.node')
     .data(window.graph.nodes)
     .enter()
@@ -297,6 +298,7 @@ function drawGraph(svg, graph){
 
     let newTexts = newNodes
     .append('text')
+    .attr('class', 'node-id-text')
     .style('font-size', 12)
     .style('fill', '#eee')
     .style('text-anchor', 'middle')
@@ -305,8 +307,11 @@ function drawGraph(svg, graph){
     let nodes = svg.selectAll('.node')
     .attr('transform', d=>`translate(${svg.sx(d.x)},${svg.sy(d.y)})`)
     .moveToFront();
-    let texts = nodes.selectAll('text')
+
+    let texts = svg.selectAll('.node-id-text')
+    .data(window.graph.nodes)
     .text(d=>d.id);
+    
     let circles = nodes.selectAll('.circles');
   }
 
