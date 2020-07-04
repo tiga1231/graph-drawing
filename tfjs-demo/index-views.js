@@ -245,6 +245,17 @@ function drawGraph(svg, graph){
   
 
   function draw(){
+    svg.append("svg:defs").append("svg:marker")
+    .attr("id", "triangle")
+    .attr("refX", 6)
+    .attr("refY", 6)
+    .attr("markerWidth", 30)
+    .attr("markerHeight", 30)
+    .attr("orient", "auto")
+    .append("path")
+    .attr("d", "M 0 0 12 6 0 12 3 6")
+    .style("fill", "black");
+
     svg.selectAll('.edge')
     .data(window.graph.edges)
     .exit()
@@ -257,6 +268,7 @@ function drawGraph(svg, graph){
     .attr('fill', 'none')
     .attr('stroke', '#333')
     .attr('stroke-width', 2)
+    .attr("marker-end", "url(#triangle)")
     .attr('opacity', 0.8);
     edges = svg.selectAll('.edge')
     .attr('x1', d=>svg.sx(d.source.x))

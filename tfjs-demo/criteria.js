@@ -908,8 +908,67 @@ function trainOneIter(dataObj, optimizer, computeMetric=true){
         metrics.crossing_number = m_cs;
 
         if (coef.crossing_number > 0){
+          function convert_2d(positions)
+          {
+            let arr = [];
+            for(var i=0;i<positions.length;i++)
+            {
+              if(i%2==0)
+              {
+                arr.push([positions[i], positions[i+1]]);
+              }
+            }
+            return arr;
+          }
+          //let arr = x.dataSync();
+          function compute_edges_vects(pos){
+            let vects_list = [];
+
+            for (let e of graph.edges){
+              let i = e.source.index;
+              let j = e.target.index;
+
+              /*let x_source = pos.gather([i]).gather([0]);
+              let x_target = pos.gather([j]).gather([0]);
+
+              let y_source = pos.gather([i]).gather([1]);
+              let y_target = pos.gather([j]).gather([1]);
+
+              let len = tf.sub[x_target - x_source, y_target - y_source];
+              let norm = Math.sqrt(len[0]*len[0] + len[1]*len[1]);*/
+              let x = pos.gather([i]);
+              let y = pos.gather([j]);
+              let norm = tf.norm(x.sub(y))
+              let dir = tf.div(x.sub(y),norm);
+
+              vects_list.push(dir);
+            }
+
+            return vects_list;
+          }
+          function compute_upwardflow(arr){
+            //let pos = convert_2d(arr);
+            let e_vects = compute_edges_vects(pos);
+
+            let prods_sum = tf.scalar(0);
+
+            for (let e of e_vects){
+              let inn_prod = e.gather(1);
+              //if(inn_prod.dataSync()[0] > 0)
+                prods_sum = prods_sum.add(inn_prod);
+                //prods_sum += inn_prod
+            }
+            
+
+            let flow = prods_sum.div(e_vects.length);
+            console.log("flow", flow);
+            return flow.mul(-10);
+          }
           let cs = crossing_number_loss(x, dataObj.edgePairs);
-          l = l.add(cs.mul(coef.crossing_number));
+          //l = l.add(cs.mul(coef.crossing_number));
+          l.print();
+          l = l.add(compute_upwardflow(x));
+          l.print();
         }
       }
 
