@@ -696,17 +696,25 @@ function gabriel_loss(x, adj, pdist){
 
 
 function upwardness_loss(x, graph){
-  return tf.tidy(()=>{
-    let m = graph.edges.length;
-    let sourceIndices = graph.edges.map(e=>e.source.index);
-    let targetIndices = graph.edges.map(e=>e.target.index);
+  let sourceIndices, targetIndices;
+  if('sourceIndices' in graph){
+    sourceIndices = graph.sourceIndices;
+    targetIndices = graph.targetIndices;
+  }else{
+    sourceIndices = graph.edges.map(e=>e.source.index);
+    targetIndices = graph.edges.map(e=>e.target.index);
+    graph.sourceIndices = sourceIndices;
+    graph.targetIndices = targetIndices;
+  }
+  let edgeCount = graph.edges.length;
 
+  return tf.tidy(()=>{
     let source = x.gather(sourceIndices);
     let target = x.gather(targetIndices);
     let dir = target.sub(source);
-    let y = dir.slice([0,1], [m, 1]);
+    let y = dir.slice([0,1], [edgeCount, 1]);
     let loss = y.sub(1).mul(-1).relu().pow(2).sum();
-    return [loss, 0];
+    return [loss, loss.dataSync()[0]];
   });
 }
 
