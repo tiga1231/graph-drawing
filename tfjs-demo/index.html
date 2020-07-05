@@ -64,36 +64,35 @@
         <label for='graphType'>Graph Type:</label>
 
         <select id="graphType" class="form-control">
-          <!-- <option value="k-5">k-5</option> -->
+          <option value="k-5">k-5</option>
           <option value="complete">complete</option>
 
-          <!-- <option value="path-5" >path-5</option> -->
-          <!-- <option value="path-10" >path-10</option> -->
+          <option value="path-5" >path-5</option>
+          <option value="path-10" >path-10</option>
 
           <option value="cycle" >cycle</option>
 
-          <option value="tree" >tree</option>
-          <!-- <option value="tree-2-4">tree-2-4</option> -->
-          <!-- <option value="tree-2-5">tree-2-5</option> -->
+          <option value="tree" selected>tree</option>
+          <option value="tree-2-4">tree-2-4</option>
+          <option value="tree-2-5">tree-2-5</option>
           
           <option value="cube" >cube</option>
           <option value="dodecahedron">dodecahedron</option>
-          <option value="symmetric" selected>symmetric</option>
+          <option value="symmetric">symmetric</option>
 
           <option value="spx_teaser">spx_teaser</option>
           <option value="block" >block</option>
           <option value="bipartite">bipartite</option>
           <option value="grid" >grid</option>
-          <!-- <option value="grid-10-6" >grid-10-6</option> -->
+          <option value="grid-10-6" >grid-10-6</option>
         </select>
 
 
-        <label for='initOption'>Init Mode:</label>
-        <select id="initOption" class="form-control">
-          <option value="random">random</option>
-          <option value="neato" selected>neato</option>
+        <label for='initOption' style='display: none;'>Init Mode:</label>
+        <select id="initOption" style='display: none;' class="form-control">
+          <option value="random" selected>random</option>
+          <option value="neato" >neato</option>
           <option value="sfdp">sfdp</option>
-          <!-- <option value="tsne">tsne</option> -->
         </select>
 
 
@@ -108,7 +107,7 @@
           <div class='sliderContainer'>
             <svg class='metric' for='stress'></svg>
             <label for='stressSlider'>Stress <span id='stressLabel'></span></label><br>
-            <input id='stressSlider' class='custom-range' type="range" min=0 max=1 value=0.3 step=0.01>
+            <input id='stressSlider' class='custom-range' type="range" min=0 max=1 value=0.0 step=0.01>
           </div>
 
           <div class='sliderContainer'>
@@ -159,6 +158,13 @@
             <label for='crossingNumberSlider'>Crossing Number <span id='crossingNumberLabel'></span></label><br>
             <input id='crossingNumberSlider' class='custom-range' type="range" min=0 max=1 value=0.0 step=0.01>
           </div>
+
+          <div class='sliderContainer'>
+            <svg class='metric' for='upwardness'></svg>
+            <label for='upwardnessSlider'>Upwardness<span id='upwardnessLabel'></span></label><br>
+            <input id='upwardnessSlider' class='custom-range' type="range" min=0 max=1 value=0.5 step=0.01>
+          </div>
+
           
             <!-- <label for='desiredAreaSlider'>Desired Area <span id='desiredAreaLabel'></span></label>
             <input id='desiredAreaSlider' class='custom-range' type="range" min=0.1 max=20 value=1.0 step=0.01>

@@ -33,6 +33,7 @@ let worstBound = {
   aspect_ratio: 0,
   gabriel: 0,
   crossing_number: Infinity,
+  upwardness: Infinity,
 };
 let bestBound = {
   stress: 0,
@@ -44,6 +45,7 @@ let bestBound = {
   aspect_ratio: 1,
   gabriel: 1,
   crossing_number: 0,
+  upwardness: 0,
 };
 
 function drawProperty(svg, metricHistory, name){
@@ -245,16 +247,23 @@ function drawGraph(svg, graph){
   
 
   function draw(){
-    svg.append("svg:defs").append("svg:marker")
-    .attr("id", "triangle")
-    .attr("refX", 6)
-    .attr("refY", 6)
-    .attr("markerWidth", 30)
-    .attr("markerHeight", 30)
-    .attr("orient", "auto")
-    .append("path")
-    .attr("d", "M 0 0 12 6 0 12 3 6")
-    .style("fill", "black");
+    let nodeRadius = 10;
+    let arrowheadSize = 4;
+    let a = arrowheadSize;
+    svg.selectAll('#triangle')
+    .data([0])
+    .enter()
+    .append('svg:defs')
+    .append('svg:marker')
+    .attr('id', 'triangle')
+    .attr('refX', arrowheadSize*2)
+    .attr('refY', arrowheadSize)
+    .attr('markerWidth', arrowheadSize*2)
+    .attr('markerHeight', arrowheadSize*2)
+    .attr('orient', 'auto')
+    .append('path')
+    .attr('d', `M 0 0 L ${a*2} ${a} L 0 ${a*2} L ${a/2} ${a} Z`)
+    .style('fill', '#333');
 
     svg.selectAll('.edge')
     .data(window.graph.edges)
@@ -268,13 +277,26 @@ function drawGraph(svg, graph){
     .attr('fill', 'none')
     .attr('stroke', '#333')
     .attr('stroke-width', 2)
-    .attr("marker-end", "url(#triangle)")
+    .attr('marker-end', 'url(#triangle)')
     .attr('opacity', 0.8);
     edges = svg.selectAll('.edge')
     .attr('x1', d=>svg.sx(d.source.x))
-    .attr('x2', d=>svg.sx(d.target.x))
     .attr('y1', d=>svg.sy(d.source.y))
-    .attr('y2', d=>svg.sy(d.target.y));
+    .attr('x2', d=>{
+      let [sx,sy] = [d.source.x, d.source.y];
+      let [tx,ty] = [d.target.x, d.target.y];
+      let [dx,dy] = [tx-sx, ty-sy];
+      let cos = dx / Math.sqrt(dx*dx + dy*dy);
+      return svg.sx(d.target.x) - nodeRadius*cos * 0.9;
+    })
+    .attr('y2', d=>{
+      let [sx,sy] = [d.source.x, d.source.y];
+      let [tx,ty] = [d.target.x, d.target.y];
+      let [dx,dy] = [tx-sx, ty-sy];
+      let sin = dy / Math.sqrt(dx*dx + dy*dy);
+      return svg.sy(d.target.y) + nodeRadius*sin * 0.9;
+
+    });
 
     svg.selectAll('.node')
     .data(window.graph.nodes)
@@ -305,7 +327,7 @@ function drawGraph(svg, graph){
 
     let newCircles = newNodes
     .append('circle')
-    .attr('r', 10)
+    .attr('r', nodeRadius)
     .attr('fill', d3.schemeCategory10[0]);
 
     let newTexts = newNodes

@@ -28,6 +28,8 @@ window.onload = function(){
   let edgeUniformityLabel = d3.select('#edgeUniformityLabel');
   let crossingNumberSlider = d3.select('#crossingNumberSlider');
   let crossingNumberLabel = d3.select('#crossingNumberLabel');
+  let upwardnessSlider = d3.select('#upwardnessSlider');
+  let upwardnessLabel = d3.select('#upwardnessLabel');
 
   let vertexResolutionSlider = d3.select('#vertexResolutionSlider');
   let vertexResolutionLabel = d3.select('#vertexResolutionLabel');
@@ -53,6 +55,7 @@ window.onload = function(){
     vertex_resolution: +vertexResolutionSlider.node().value,
     gabriel: +gabrielSlider.node().value,
     aspect_ratio: +aspectRatioSlider.node().value,
+    upwardness: +upwardnessSlider.node().value,
     // area: (areaSlider.node() !== null ? +areaSlider.node().value : 0.0),
   };
 
@@ -332,6 +335,13 @@ window.onload = function(){
         coef['aspect_ratio'] = value;
       });
       aspectRatioSlider.on('input')();
+
+      upwardnessSlider.on('input', function(){
+        let value = +upwardnessSlider.node().value;
+        upwardnessLabel.text(value.toFixed(2));
+        coef['upwardness'] = value;
+      });
+      upwardnessSlider.on('input')();
 
 
 
