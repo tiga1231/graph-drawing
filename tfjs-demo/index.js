@@ -96,6 +96,9 @@ window.onload = function(){
 
   function loadGraph(fn){
     d3.json(fn).then((graph)=>{
+      var graphJson = document.getElementById("graphJson").value.trim();
+      if(graphJson.length!=0)
+        graph = JSON.parse(graphJson);
       window.graph = graph;
 
       let x;

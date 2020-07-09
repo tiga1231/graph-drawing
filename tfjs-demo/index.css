@@ -89,6 +89,12 @@ svg.metric{
   mix-blend-mode: difference;
 }
 
+
+/* Show the tooltip text when you mouse over the tooltip container */
+.tooltip:hover .tooltiptext {
+  visibility: visible;
+}
+
 /*https://www.w3schools.com/howto/howto_js_rangeslider.asp*/
 /*.slider {
   -webkit-appearance: none;
