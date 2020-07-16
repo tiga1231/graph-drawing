@@ -64,6 +64,8 @@
         <label for='graphType'>Graph Type:</label>
 
         <select id="graphType" class="form-control">
+          <option value="custom" disabled hidden> Custom</option> 
+
           <option value="k-5">k-5</option>
           <option value="complete">complete</option>
 
@@ -107,7 +109,7 @@
           <div class='sliderContainer'>
             <svg class='metric' for='stress'></svg>
             <label for='stressSlider'>Stress <span id='stressLabel'></span></label><br>
-            <input id='stressSlider' class='custom-range' type="range" min=0 max=1 value=0.0 step=0.01>
+            <input id='stressSlider' class='custom-range' type="range" min=0 max=1 value=0.1 step=0.01>
           </div>
 
           <div class='sliderContainer'>
@@ -179,8 +181,8 @@
             <input id='momentum' class='custom-range' type="range" min="0.0" max="0.95" value="0.5" step="0.01">
 
             <label for="graphJson">Insert Graph (<a href="http://cgi.cs.arizona.edu/~abureyanahmed/bipartite.json" target=”_blank”>json format</a>):</label>
-            <textarea id="graphJson" name="graphJson" rows="4" cols="30">
-            </textarea>
+            <input type="file" id="graphFile">
+            <textarea id="graphJson" name="graphJson" rows="4" cols="30"></textarea>
 
         </form>
       </div>

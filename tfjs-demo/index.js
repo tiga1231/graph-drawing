@@ -94,263 +94,294 @@ window.onload = function(){
   window.addEventListener('resize', ()=>{updateSvgSize(svg_loss, svg_graph)});
 
 
-  function loadGraph(fn){
-    d3.json(fn).then((graph)=>{
-      var graphJson = document.getElementById("graphJson").value.trim();
-      if(graphJson.length!=0)
-        graph = JSON.parse(graphJson);
+
+  let graphJson = d3.select('#graphJson')
+  .on('change', ()=>{
+    let graph = JSON.parse(graphJson.node().value);
+    window.graph = graph;
+    cancelAnimationFrame(dataObj.animId);
+    loadGraph(graph);
+    graphTypeSelect.node().value = 'custom';
+  });
+
+
+  let graphFile = d3.select('#graphFile')
+  .on('change', ()=>{
+    let file = event.target.files[0];
+    let reader = new FileReader();
+    reader.addEventListener('load', (event) => {
+      let text = event.target.result;
+      let graph = JSON.parse(text);
       window.graph = graph;
+      cancelAnimationFrame(dataObj.animId);
+      loadGraph(graph);
+      graphJson.node().value = text;
+      graphTypeSelect.node().value = 'custom';
+    });
+    reader.readAsText(file);
+  });
 
-      let x;
-      function reset(){
-        console.log('reset');
-        if(initMode == 'neato' && graph.initPosition_neato !== undefined){
-          x = tf.variable(tf.tensor2d(graph.initPosition_neato).div(100));
-        }else if(initMode == 'sfdp' && graph.initPosition_sfdp !== undefined){
-          x = tf.variable(tf.tensor2d(graph.initPosition_sfdp).div(100));
-        }else if(initMode == 'tsne' && graph.initPosition_tsne !== undefined){
-          x = tf.variable(tf.tensor2d(graph.initPosition_tsne));
-        }else if(initMode == 'random'){
-          x = tf.variable(
-            tf.randomUniform([graph.nodes.length,2], -1, 1)
-          );
-        }
-        boundaries = undefined;
-        historicalWorst = {};
-        if(lrSlider.on('input')){
-          lrSlider.on('input')(lr0);
-        }
+
+  
+  function loadGraph(graph){
+    window.graph = graph;
+
+    let x;
+    function reset(){
+      console.log('reset');
+      if(initMode == 'neato' && graph.initPosition_neato !== undefined){
+        x = tf.variable(tf.tensor2d(graph.initPosition_neato).div(100));
+      }else if(initMode == 'sfdp' && graph.initPosition_sfdp !== undefined){
+        x = tf.variable(tf.tensor2d(graph.initPosition_sfdp).div(100));
+      }else if(initMode == 'tsne' && graph.initPosition_tsne !== undefined){
+        x = tf.variable(tf.tensor2d(graph.initPosition_tsne));
+      }else if(initMode == 'random'){
+        x = tf.variable(
+          tf.randomUniform([graph.nodes.length,2], -1, 1)
+        );
       }
-      
-      reset();
-      optimizers[0] = tf.train.momentum(lr, momentum, false);
-      preprocess(graph, x.arraySync());
-
-      let n_neighbors = graph.graphDistance
-      .map((row)=>{
-        return row.reduce((a,b)=>b==1?a+1:a, 0);
-      });
-      let adj = graph.graphDistance.map(row=>row.map(d=>d==1.0 ? 1.0 : 0.0));
-      adj = tf.tensor2d(adj);
-      let graphDistance = tf.tensor2d(graph.graphDistance);
-      let stressWeight = tf.tensor2d(graph.weight);
-      let edgePairs = getEdgePairs(graph);
-      let neighbors = graph2neighbors(graph);
-      let edges = graph.edges.map(d=>[d.source.index, d.target.index]);
-
-      let dataObj = {
-        sampleSize,
-        x, 
-        graphDistance, 
-        adj,
-        stressWeight,
-        graph,
-        animId,
-        coef,
-        n_neighbors,
-        edgePairs,
-        neighbors,
-        edges,
-      };
-      window.dataObj = dataObj;
-
-      function play(){
-        train(dataObj, niter, optimizers, (record)=>{
-          // console.log(record);
-          metrics.push(record.metrics);
-          losses.push(record.loss);
-          if (losses.length>maxPlotIter){
-            losses = losses.slice(losses.length-maxPlotIter);
-          }
-          if (metrics.length > maxMetricSize){
-            metrics = metrics.slice(metrics.length-maxMetricSize);
-          }
-          traceLoss(svg_loss, losses, maxPlotIter);
-          traceMetrics(svg_metrics, metrics, maxMetricSize);
-          window.metrics = metrics;
-          if (losses.length >= 10){
-            let n = losses.length;
-            let firstSlice = losses.slice(Math.floor(n/2), Math.floor(n/4*3));
-            let secondSlice = losses.slice(Math.floor(n/4*3), n);
-            let avgLoss0 = math.mean(firstSlice);
-            let avgLoss1 = math.mean(secondSlice);
-            if(avgLoss1 > avgLoss0){
-              lrSlider.on('input')(Math.max(lr/1.01, 0.001 ));
-            }
-          }
-          updateNodePosition(graph, x.arraySync());
-          drawGraph(svg_graph, graph);
-        });
+      boundaries = undefined;
+      historicalWorst = {};
+      if(lrSlider.on('input')){
+        lrSlider.on('input')(lr0);
       }
-      play();
-      
-      //interactions
-      playButton.on('click', function(shouldPlay){
-        if(shouldPlay === undefined){
-          isPlaying = !isPlaying;
-        }else{
-          isPlaying = shouldPlay;
-        }
-        if(isPlaying){
-          playButton.attr('class', 'fas fa-pause-circle');
-          play();
-        }else{
-          playButton.attr('class', 'fas fa-play-circle');
-        }
-      });
+    }
+    
+    reset();
+    optimizers[0] = tf.train.momentum(lr, momentum, false);
+    preprocess(graph, x.arraySync());
 
-      resetButton.on('click', function(){
-        reset();
-        svg_graph.xDomain = undefined;
-        let xy = x.arraySync();
-        graph.nodes.forEach((d,i)=>{
-          d.x = xy[i][0];
-          d.x = xy[i][1];
-        });
-        dataObj.x = x;
+    let n_neighbors = graph.graphDistance
+    .map((row)=>{
+      return row.reduce((a,b)=>b==1?a+1:a, 0);
+    });
+    let adj = graph.graphDistance.map(row=>row.map(d=>d==1.0 ? 1.0 : 0.0));
+    adj = tf.tensor2d(adj);
+    let graphDistance = tf.tensor2d(graph.graphDistance);
+    let stressWeight = tf.tensor2d(graph.weight);
+    let edgePairs = getEdgePairs(graph);
+    let neighbors = graph2neighbors(graph);
+    let edges = graph.edges.map(d=>[d.source.index, d.target.index]);
+
+    let dataObj = {
+      sampleSize,
+      x, 
+      graphDistance, 
+      adj,
+      stressWeight,
+      graph,
+      animId,
+      coef,
+      n_neighbors,
+      edgePairs,
+      neighbors,
+      edges,
+    };
+    window.dataObj = dataObj;
+
+    function play(){
+      train(dataObj, niter, optimizers, (record)=>{
+        // console.log(record);
+        metrics.push(record.metrics);
+        losses.push(record.loss);
+        if (losses.length>maxPlotIter){
+          losses = losses.slice(losses.length-maxPlotIter);
+        }
+        if (metrics.length > maxMetricSize){
+          metrics = metrics.slice(metrics.length-maxMetricSize);
+        }
+        traceLoss(svg_loss, losses, maxPlotIter);
+        traceMetrics(svg_metrics, metrics, maxMetricSize);
+        window.metrics = metrics;
+        if (losses.length >= 10){
+          let n = losses.length;
+          let firstSlice = losses.slice(Math.floor(n/2), Math.floor(n/4*3));
+          let secondSlice = losses.slice(Math.floor(n/4*3), n);
+          let avgLoss0 = math.mean(firstSlice);
+          let avgLoss1 = math.mean(secondSlice);
+          if(avgLoss1 > avgLoss0){
+            lrSlider.on('input')(Math.max(lr/1.01, 0.001 ));
+          }
+        }
+        updateNodePosition(graph, x.arraySync());
         drawGraph(svg_graph, graph);
       });
+    }
+    play();
+    
+    //interactions
+    playButton.on('click', function(shouldPlay){
+      if(shouldPlay === undefined){
+        isPlaying = !isPlaying;
+      }else{
+        isPlaying = shouldPlay;
+      }
+      if(isPlaying){
+        playButton.attr('class', 'fas fa-pause-circle');
+        play();
+      }else{
+        playButton.attr('class', 'fas fa-play-circle');
+      }
+    });
 
-      downloadButton.on('click', ()=>{
-
-        //download json
-        // let res = {};
-        // res.nodes = graph.nodes;
-        // res.edges = graph.edges.map(d=>({
-        //   source: d.source.id, 
-        //   target: d.target.id,
-        // }));
-        // res.coef = coef;
-        // res.optimizer = {
-        //   lr: optimizers[0].learningRate, 
-        //   momentum: optimizers[0].momentum
-        // };
-        // res.graphDistance = graph.graphDistance;
-        // res.weight = graph.weight;
-        // let res_json = JSON.stringify(res, null, 2);
-        // let file_name = `${graphTypeSelect.node().value}.json`;
-        // let dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(res_json);
-        // var anchor = document.getElementById('download-json');
-        // anchor.setAttribute('href', dataStr);
-        // anchor.setAttribute('download', file_name);
-        // anchor.click();
-        
-
-        // download PNG:
-        downloadPNG();
+    resetButton.on('click', function(){
+      reset();
+      svg_graph.xDomain = undefined;
+      let xy = x.arraySync();
+      graph.nodes.forEach((d,i)=>{
+        d.x = xy[i][0];
+        d.x = xy[i][1];
       });
+      dataObj.x = x;
+      drawGraph(svg_graph, graph);
+    });
 
-      graphTypeSelect.on('change', function(){
-        let fn = d3.select(this).node().value;
-        fn = `data/${fn}.json`;
-        cancelAnimationFrame(dataObj.animId);
-        loadGraph(fn);
-      });
+    downloadButton.on('click', ()=>{
 
+      //download json
+      // let res = {};
+      // res.nodes = graph.nodes;
+      // res.edges = graph.edges.map(d=>({
+      //   source: d.source.id, 
+      //   target: d.target.id,
+      // }));
+      // res.coef = coef;
+      // res.optimizer = {
+      //   lr: optimizers[0].learningRate, 
+      //   momentum: optimizers[0].momentum
+      // };
+      // res.graphDistance = graph.graphDistance;
+      // res.weight = graph.weight;
+      // let res_json = JSON.stringify(res, null, 2);
+      // let file_name = `${graphTypeSelect.node().value}.json`;
+      // let dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(res_json);
+      // var anchor = document.getElementById('download-json');
+      // anchor.setAttribute('href', dataStr);
+      // anchor.setAttribute('download', file_name);
+      // anchor.click();
       
 
-      lrSlider.on('input', function(value){
-        window.lr = value || Math.exp(+d3.select(this).node().value);
-        lrText.text(lr.toFixed(4));
-        optimizers[0] = tf.train.momentum(lr, momentum, false);
-        lrSlider.property('value', Math.log(lr));
-      });
+      // download PNG:
+      downloadPNG();
+    });
 
-      momentumSlider.on('input', function(){
-        window.momentum = +d3.select(this).node().value;
-        momentumText.text(window.momentum);
-        optimizers[0] = tf.train.momentum(window.lr, momentum, false);
-      });
-
-      stressSlider.on('input', function(){
-        let value = +stressSlider.node().value;
-        stressLabel.text(value.toFixed(2));
-        coef['stress'] = value;
-      });
-      stressSlider.on('input')();
-
-      crossingAngleSlider.on('input', function(){
-        let value = +crossingAngleSlider.node().value;
-        crossingAngleLabel.text(value.toFixed(2));
-        coef['crossing_angle'] = value;
-      });
-      crossingAngleSlider.on('input')();
-
-      neighborSlider.on('input', function(){
-        let value = +neighborSlider.node().value;
-        neighborLabel.text(value.toFixed(2));
-        coef['neighbor'] = value;
-      });
-      neighborSlider.on('input')();
-
-      edgeUniformitySlider.on('input', function(){
-        let value = +edgeUniformitySlider.node().value;
-        edgeUniformityLabel.text(value.toFixed(2));
-        coef['edge_uniformity'] = value;
-      });
-      edgeUniformitySlider.on('input')();
-
-      crossingNumberSlider.on('input', function(){
-        let value = +crossingNumberSlider.node().value;
-        crossingNumberLabel.text(value.toFixed(2));
-        coef['crossing_number'] = value;
-      });
-      crossingNumberSlider.on('input')();
-
-      angularResolutionSlider.on('input', function(){
-        let value = +angularResolutionSlider.node().value;
-        angularResolutionLabel.text(value.toFixed(2));
-        coef['angular_resolution'] = value;
-      });
-      angularResolutionSlider.on('input')();
-
-      // areaSlider.on('input', function(){
-      //   let value = +areaSlider.node().value;
-      //   areaLabel.text(value.toFixed(2));
-      //   coef['area'] = value;
-      // });
-      // areaSlider.on('input')();
-      // desiredAreaSlider.on('input', function(){
-      //   let value = +desiredAreaSlider.node().value;
-      //   desiredAreaLabel.text(value.toFixed(2));
-      //   dataObj['desiredArea'] = value;
-      // });
-      // desiredAreaSlider.on('input')();
-
-
-      vertexResolutionSlider.on('input', function(){
-        let value = +vertexResolutionSlider.node().value;
-        vertexResolutionLabel.text(value.toFixed(2));
-        coef['vertex_resolution'] = value;
-      });
-      vertexResolutionSlider.on('input')();
-
-      gabrielSlider.on('input', function(){
-        let value = +gabrielSlider.node().value;
-        gabrielLabel.text(value.toFixed(2));
-        coef['gabriel'] = value;
-      });
-      gabrielSlider.on('input')();
-
-      aspectRatioSlider.on('input', function(){
-        let value = +aspectRatioSlider.node().value;
-        aspectRatioLabel.text(value.toFixed(2));
-        coef['aspect_ratio'] = value;
-      });
-      aspectRatioSlider.on('input')();
-
-      upwardnessSlider.on('input', function(){
-        let value = +upwardnessSlider.node().value;
-        upwardnessLabel.text(value.toFixed(2));
-        coef['upwardness'] = value;
-      });
-      upwardnessSlider.on('input')();
-
+    graphTypeSelect.on('change', function(){
+      let fn = d3.select(this).node().value;
+      fn = `data/${fn}.json`;
+      cancelAnimationFrame(dataObj.animId);
+      loadJson(fn);
 
 
     });
+
+    
+
+    lrSlider.on('input', function(value){
+      window.lr = value || Math.exp(+d3.select(this).node().value);
+      lrText.text(lr.toFixed(4));
+      optimizers[0] = tf.train.momentum(lr, momentum, false);
+      lrSlider.property('value', Math.log(lr));
+    });
+
+    momentumSlider.on('input', function(){
+      window.momentum = +d3.select(this).node().value;
+      momentumText.text(window.momentum);
+      optimizers[0] = tf.train.momentum(window.lr, momentum, false);
+    });
+
+    stressSlider.on('input', function(){
+      let value = +stressSlider.node().value;
+      stressLabel.text(value.toFixed(2));
+      coef['stress'] = value;
+    });
+    stressSlider.on('input')();
+
+    crossingAngleSlider.on('input', function(){
+      let value = +crossingAngleSlider.node().value;
+      crossingAngleLabel.text(value.toFixed(2));
+      coef['crossing_angle'] = value;
+    });
+    crossingAngleSlider.on('input')();
+
+    neighborSlider.on('input', function(){
+      let value = +neighborSlider.node().value;
+      neighborLabel.text(value.toFixed(2));
+      coef['neighbor'] = value;
+    });
+    neighborSlider.on('input')();
+
+    edgeUniformitySlider.on('input', function(){
+      let value = +edgeUniformitySlider.node().value;
+      edgeUniformityLabel.text(value.toFixed(2));
+      coef['edge_uniformity'] = value;
+    });
+    edgeUniformitySlider.on('input')();
+
+    crossingNumberSlider.on('input', function(){
+      let value = +crossingNumberSlider.node().value;
+      crossingNumberLabel.text(value.toFixed(2));
+      coef['crossing_number'] = value;
+    });
+    crossingNumberSlider.on('input')();
+
+    angularResolutionSlider.on('input', function(){
+      let value = +angularResolutionSlider.node().value;
+      angularResolutionLabel.text(value.toFixed(2));
+      coef['angular_resolution'] = value;
+    });
+    angularResolutionSlider.on('input')();
+
+    // areaSlider.on('input', function(){
+    //   let value = +areaSlider.node().value;
+    //   areaLabel.text(value.toFixed(2));
+    //   coef['area'] = value;
+    // });
+    // areaSlider.on('input')();
+    // desiredAreaSlider.on('input', function(){
+    //   let value = +desiredAreaSlider.node().value;
+    //   desiredAreaLabel.text(value.toFixed(2));
+    //   dataObj['desiredArea'] = value;
+    // });
+    // desiredAreaSlider.on('input')();
+
+
+    vertexResolutionSlider.on('input', function(){
+      let value = +vertexResolutionSlider.node().value;
+      vertexResolutionLabel.text(value.toFixed(2));
+      coef['vertex_resolution'] = value;
+    });
+    vertexResolutionSlider.on('input')();
+
+    gabrielSlider.on('input', function(){
+      let value = +gabrielSlider.node().value;
+      gabrielLabel.text(value.toFixed(2));
+      coef['gabriel'] = value;
+    });
+    gabrielSlider.on('input')();
+
+    aspectRatioSlider.on('input', function(){
+      let value = +aspectRatioSlider.node().value;
+      aspectRatioLabel.text(value.toFixed(2));
+      coef['aspect_ratio'] = value;
+    });
+    aspectRatioSlider.on('input')();
+
+    upwardnessSlider.on('input', function(){
+      let value = +upwardnessSlider.node().value;
+      upwardnessLabel.text(value.toFixed(2));
+      coef['upwardness'] = value;
+    });
+    upwardnessSlider.on('input')();
   }//loadGraph end
-  loadGraph(fn);
+
+  function loadJson(fn){
+    d3.json(fn).then((graph)=>{
+      graphJson.node().value = JSON.stringify(graph, null, 2);
+      loadGraph(graph);
+    });
+  }
+
+  loadJson(fn);
 };//onload end
 
 
