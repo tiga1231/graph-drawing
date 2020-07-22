@@ -247,8 +247,11 @@ function drawGraph(svg, graph){
   
 
   function draw(){
-    let nodeRadius = 10;
-    let arrowheadSize = 4;
+    let nodeRadius = 200 / window.graph.nodes.length;
+    nodeRadius = Math.max(nodeRadius, 3); //clamp to min
+    nodeRadius = Math.min(nodeRadius, 10); //clamp to max
+
+    let arrowheadSize = 2;
     let a = arrowheadSize;
     svg.selectAll('#triangle')
     .data([0])
@@ -269,6 +272,7 @@ function drawGraph(svg, graph){
     .data(window.graph.edges)
     .exit()
     .remove();
+
     let edges = svg.selectAll('.edge')
     .data(window.graph.edges)
     .enter()
@@ -279,6 +283,7 @@ function drawGraph(svg, graph){
     .attr('stroke-width', 2)
     .attr('marker-end', 'url(#triangle)')
     .attr('opacity', 0.8);
+
     edges = svg.selectAll('.edge')
     .attr('x1', d=>svg.sx(d.source.x))
     .attr('y1', d=>svg.sy(d.source.y))
@@ -327,13 +332,12 @@ function drawGraph(svg, graph){
 
     let newCircles = newNodes
     .append('circle')
-    .attr('r', nodeRadius)
     .attr('fill', d3.schemeCategory10[0]);
 
     let newTexts = newNodes
     .append('text')
     .attr('class', 'node-id-text')
-    .style('font-size', 12)
+    .style('font-size', 6)
     .style('fill', '#eee')
     .style('text-anchor', 'middle')
     .style('alignment-baseline', 'middle');
@@ -346,7 +350,8 @@ function drawGraph(svg, graph){
     .data(window.graph.nodes)
     .text(d=>d.id);
     
-    let circles = nodes.selectAll('.circles');
+    let circles = nodes.selectAll('circle')
+    .attr('r', nodeRadius);
   }
 
   window.addEventListener('resize', ()=>{

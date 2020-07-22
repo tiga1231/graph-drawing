@@ -34,20 +34,39 @@ function pairwise_distance(x){
 function stress_loss(pdist, graphDistance, weight){
   return tf.tidy(()=>{
     let n = pdist.shape[0];
-    let mask = tf.scalar(1.0).sub(tf.eye(n));
-    let numerator = graphDistance.mul(weight).mul(pdist).mul(mask).sum();
-    let denominator = graphDistance.pow(2).mul(weight).mul(mask).sum();
-    let optimalScaling = numerator.div( denominator );
+    // let mask = tf.scalar(1.0).sub(tf.eye(n));
+    // let numerator = graphDistance.mul(weight).mul(pdist).mul(mask).sum();
+    // let denominator = graphDistance.pow(2).mul(weight).mul(mask).sum();
+    // let optimalScaling = numerator.div( denominator );
 
     let stress = pdist.sub(graphDistance).square().mul(weight).sum().div(2);
     let loss = stress.div(2);
 
     //metric
-    let pdist_normalized = pdist.div(optimalScaling);
-    let metric = pdist_normalized.sub(graphDistance).square().mul(weight).sum().div(2);
-    metric = metric.dataSync()[0];
+    // let pdist_normalized = pdist.div(optimalScaling);
+    // let metric = pdist_normalized.sub(graphDistance).square().mul(weight).sum().div(2);
+    // metric = metric.dataSync()[0];
+    return [loss, 0, 0];
+    // return [loss, metric, pdist_normalized.arraySync()];
+  });
+}
 
-    return [loss, metric, pdist_normalized.arraySync()];
+function stress_loss_2(pdist, graphDistance, weight){
+  let n = pdist.shape[0];
+  let upperTriangularIndices = d3.range(n*n).filter(i=>{
+    let col = i % n;
+    let row = Math.floor(i / n);
+    return col > row;
+  });
+
+  return tf.tidy(()=>{
+    pdist = pdist.flatten().gather(upperTriangularIndices);
+    graphDistance = graphDistance.flatten().gather(upperTriangularIndices);
+    weight = weight.flatten().gather(upperTriangularIndices);
+
+    let stress = pdist.sub(graphDistance).square().mul(weight).sum().div(2);
+    let loss = stress.div(2);
+    return [loss, 0, 0];
   });
 }
 
@@ -313,6 +332,8 @@ function graph2crossings(graph){
 }
 
 function crossing_angle_metric(x, graph){
+  // return 0.0; //disabled for faster training
+
   let crossings = graph2crossings(graph);
   if(crossings.length>0){
     //metric
@@ -714,7 +735,7 @@ function upwardness_loss(x, graph){
     let dir = target.sub(source);
     let y = dir.slice([0,1], [edgeCount, 1]);
     let loss = y.sub(1).mul(-1).relu().pow(2).sum();
-    return [loss, loss.dataSync()[0]];
+    return [loss, 0.0];
   });
 }
 
@@ -871,7 +892,7 @@ function crossing_number_metric(x, graph){
 
 function trainOneIter(dataObj, optimizer, computeMetric=true){
   let x = dataObj.x;
-  let x_array = x.arraySync();
+  // let x_array = x.arraySync();
   let graphDistance = dataObj.graphDistance;
   let stressWeight = dataObj.stressWeight
   let graph = dataObj.graph;
@@ -884,13 +905,11 @@ function trainOneIter(dataObj, optimizer, computeMetric=true){
     let loss = tf.tidy(()=>{
       let l = center_loss(x);
       
-      if(coef.stress > 0 || computeMetric){
+      if(coef.stress > 0){
         let [st, m_st, pdist_normalized] = stress_loss(pdist, graphDistance, stressWeight);
         metrics.stress = m_st;
         metrics.pdist = pdist_normalized;
-        if(coef.stress > 0){
-          l = l.add(st.mul(coef.stress));
-        }
+        l = l.add(st.mul(coef.stress));
       }
 
       if(coef.crossing_angle > 0){
@@ -898,8 +917,8 @@ function trainOneIter(dataObj, optimizer, computeMetric=true){
         metrics.crossing_angle = m_an;
         l = l.add(an.mul(coef.crossing_angle));
       }else{
-        let m_an = crossing_angle_metric(x, graph);
-        metrics.crossing_angle = m_an;
+        // let m_an = crossing_angle_metric(x, graph);
+        // metrics.crossing_angle = m_an;
       }
       
       if (coef.neighbor > 0){
@@ -910,96 +929,31 @@ function trainOneIter(dataObj, optimizer, computeMetric=true){
           l = l.add(nb.mul(coef.neighbor));
         }
       }else if (computeMetric){
-        let [thresh, scale, margin] = computeThreshScaleMargin(pdist.arraySync(), n_neighbors);
-        let truth = adj;
-        let mask = tf.scalar(1.0).sub(tf.eye(pdist.shape[0]));
-        let pred = pdist.sub(thresh).mul(-1).mul(mask);
-        let m_nb = jaccardIndex(pred.arraySync(), truth.arraySync());
-        metrics.neighbor = m_nb;
+        // let [thresh, scale, margin] = computeThreshScaleMargin(pdist.arraySync(), n_neighbors);
+        // let truth = adj;
+        // let mask = tf.scalar(1.0).sub(tf.eye(pdist.shape[0]));
+        // let pred = pdist.sub(thresh).mul(-1).mul(mask);
+        // let m_nb = jaccardIndex(pred.arraySync(), truth.arraySync());
+        // metrics.neighbor = m_nb;
       }
 
       
-      if(coef.edge_uniformity > 0 || computeMetric){
+      if(coef.edge_uniformity > 0){
         let [eu, m_eu] = edge_uniformity_loss(pdist, adj);
         metrics.edge_uniformity = m_eu;
-        if(coef.edge_uniformity > 0){
-          l = l.add(eu.mul(coef.edge_uniformity));
-        }
+        l = l.add(eu.mul(coef.edge_uniformity));
       }
 
       
-      if (coef.crossing_number > 0 || computeMetric){
-        let m_cs = crossing_number_metric(x, graph);
-        metrics.crossing_number = m_cs;
-        if (coef.crossing_number > 0){
-          let cs = crossing_number_loss(x, dataObj.edgePairs);
-          l = l.add(cs.mul(coef.crossing_number));
-
-          // function convert_2d(positions)
-          // {
-          //   let arr = [];
-          //   for(var i=0;i<positions.length;i++)
-          //   {
-          //     if(i%2==0)
-          //     {
-          //       arr.push([positions[i], positions[i+1]]);
-          //     }
-          //   }
-          //   return arr;
-          // }
-          // //let arr = x.dataSync();
-          // function compute_edges_vects(pos){
-          //   let vects_list = [];
-
-          //   for (let e of graph.edges){
-          //     let i = e.source.index;
-          //     let j = e.target.index;
-
-          //     let x_source = pos.gather([i]).gather([0]);
-          //     let x_target = pos.gather([j]).gather([0]);
-
-          //     let y_source = pos.gather([i]).gather([1]);
-          //     let y_target = pos.gather([j]).gather([1]);
-
-          //     let len = tf.sub[x_target - x_source, y_target - y_source];
-          //     let norm = Math.sqrt(len[0]*len[0] + len[1]*len[1]);
-          //     let x = pos.gather([i]);
-          //     let y = pos.gather([j]);
-          //     let norm = tf.norm(x.sub(y))
-          //     let dir = tf.div(x.sub(y),norm);
-
-          //     vects_list.push(dir);
-          //   }
-
-          //   return vects_list;
-          // }
-        //   function compute_upwardflow(arr){
-        //     //let pos = convert_2d(arr);
-        //     let e_vects = compute_edges_vects(pos);
-
-        //     let prods_sum = tf.scalar(0);
-
-        //     for (let e of e_vects){
-        //       let inn_prod = e.gather(1);
-        //       //if(inn_prod.dataSync()[0] > 0)
-        //         prods_sum = prods_sum.add(inn_prod);
-        //         //prods_sum += inn_prod
-        //     }
-            
-
-        //     let flow = prods_sum.div(e_vects.length);
-        //     console.log("flow", flow);
-        //     return flow.mul(-10);
-        //   }
-          
-        //   l.print();
-        //   l = l.add(compute_upwardflow(x));
-        //   l.print();
-        }
+      if (coef.crossing_number > 0){
+        // let m_cs = crossing_number_metric(x, graph);
+        // metrics.crossing_number = m_cs;
+        let cs = crossing_number_loss(x, dataObj.edgePairs);
+        l = l.add(cs.mul(coef.crossing_number));
       }
 
 
-      if(coef.angular_resolution > 0 || computeMetric){
+      if(coef.angular_resolution > 0){
         let m_ar = angular_resolution_metric(x, dataObj.neighbors);
         metrics.angular_resolution = m_ar;
 
@@ -1010,7 +964,7 @@ function trainOneIter(dataObj, optimizer, computeMetric=true){
       }
 
       
-      if(coef.vertex_resolution > 0 || computeMetric){
+      if(coef.vertex_resolution > 0){
         let [vr, m_vr] = vertex_resolution_loss(pdist);
         metrics.vertex_resolution = m_vr;
         if(coef.vertex_resolution > 0){
@@ -1019,38 +973,28 @@ function trainOneIter(dataObj, optimizer, computeMetric=true){
       }
 
 
-      if(coef.aspect_ratio > 0 || computeMetric){
+      if(coef.aspect_ratio > 0){
         let [as, m_as] = aspect_ratio_loss(x);
         metrics.aspect_ratio = m_as;
-        if(coef.aspect_ratio > 0){
-          l = l.add(as.mul(coef.aspect_ratio));
-        }
+        l = l.add(as.mul(coef.aspect_ratio));
       }
 
 
-      if(coef.gabriel > 0 || computeMetric){
+      if(coef.gabriel > 0){
         let [gb, m_gb] = gabriel_loss(x, adj, pdist);
         metrics.gabriel = m_gb;
-        if(coef.gabriel > 0){
-          l = l.add(gb.mul(coef.gabriel));
-        }
+        l = l.add(gb.mul(coef.gabriel));
       }
 
-      if(coef.upwardness > 0 || computeMetric){
+      if(coef.upwardness > 0){
         let [up, m_up] = upwardness_loss(x, graph);
         metrics.upwardness = m_up;
-        if(coef.upwardness > 0){
-          l = l.add(up.mul(coef.upwardness));
-        }
+        l = l.add(up.mul(coef.upwardness));
       }
 
-      //// if(coef.area > 0){
-      ////   let al = area_loss(x, pdist, dataObj.edges, dataObj.desiredArea);
-      ////   l = l.add(al.mul(coef.area));
-      //// }
-      ///
-      let upperBound = 1e4;
-      return l.div(upperBound).tanh().mul(upperBound);
+      // let upperBound = 1e4;
+      // return l.div(upperBound).tanh().mul(upperBound);
+      return l;
     });
     return loss;
   }, true, [x]);
@@ -1071,12 +1015,18 @@ function train(dataObj, remainingIter, optimizers, callback){
     if (callback){
       callback({
         remainingIter,
-        loss: loss.dataSync()[0],
+        loss: 0.0,//loss.dataSync()[0],
         metrics
       });
     }
-    dataObj.animId = requestAnimationFrame(()=>{
+    dataObj.animId = requestAnimationFrame((t)=>{
+      if(this.t !== undefined){
+        let dt = t - this.t;
+        let fps = 1000 / dt;
+        console.log(fps.toFixed(2));
+      }
       train(dataObj, remainingIter-1, optimizers, callback);
+      this.t = t;
     });
   }
 }

@@ -203,8 +203,11 @@ window.onload = function(){
             lrSlider.on('input')(Math.max(lr/1.01, 0.001 ));
           }
         }
-        updateNodePosition(graph, x.arraySync());
-        drawGraph(svg_graph, graph);
+        niter -= 1;
+        if(niter % 1 == 0){
+          updateNodePosition(graph, x.arraySync());
+          drawGraph(svg_graph, graph);
+        }
       });
     }
     play();
