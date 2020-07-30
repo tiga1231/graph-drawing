@@ -278,16 +278,6 @@ window.onload = function(){
     snapCheckbox.on('click', function(){
       graph.snapToInt = d3.select(this).node().checked;
 
-      // if(graph.snapToInt){
-      //   graph.nodes.forEach(d=>{
-      //     d.x = Math.round(d.x);
-      //     d.y = Math.round(d.y);
-      //   });
-      //   drawGraph(graph, svg_graph);
-      // }
-      
-      // let newPos = graph.nodes.map(d=>[d.x / graph.scalingFactor, d.y/graph.scalingFactor]);
-      // dataObj.x.assign(tf.tensor2d(newPos));
     });
 
 

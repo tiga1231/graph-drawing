@@ -244,7 +244,6 @@ function drawGraph(graph, svg){
 
   let sx = (x)=>graph.snapToInt ? svg.sx(Math.round(x)) : svg.sx(x);
   let sy = (y)=>graph.snapToInt ? svg.sy(Math.round(y)) : svg.sy(y);
-
   function draw(){
     let nodeRadius = 200 / graph.nodes.length;
     nodeRadius = Math.max(nodeRadius, 4); //clamp to min
@@ -321,7 +320,7 @@ function drawGraph(graph, svg){
         let dy = d3.event.dy;
         d.x = svg.sx.invert(x);
         d.y = svg.sy.invert(y);
-        let newPos = graph.nodes.map(d=>[d.x, d.y]);
+        let newPos = graph.nodes.map(d=>[d.x / graph.scalingFactor, d.y / graph.scalingFactor]);
         dataObj.x.assign(tf.tensor2d(newPos));
         draw();
       })
@@ -357,12 +356,12 @@ function drawGraph(graph, svg){
   }//draw end
 
   updateScales(graph, svg);
-  updateAxes(svg, svg.sx, svg.sy, true);
+  updateAxes(svg, svg.sx, svg.sy, false);
   draw();
 
   window.addEventListener('resize', ()=>{
     updateScales(graph, svg);
-    updateAxes(svg, svg.sx, svg.sy, true);
+    updateAxes(svg, svg.sx, svg.sy, false);
     draw(sx, sy);
   });
 
