@@ -232,7 +232,7 @@ window.onload = function(){
       let xy = x.arraySync();
       graph.nodes.forEach((d,i)=>{
         d.x = xy[i][0];
-        d.x = xy[i][1];
+        d.y = xy[i][1];
       });
       dataObj.x = x;
       drawGraph(graph, svg_graph);

@@ -201,6 +201,7 @@ function updateNodePosition(graph, xy){
 
 
 function updateScales(graph, svg){
+  console.log('updateScales');
   let width = svg.node().clientWidth;
   let height = svg.node().clientHeight;
 
@@ -237,13 +238,13 @@ function updateScales(graph, svg){
 }
 
 function drawGraph(graph, svg){
-  if(svg.sx == undefined){
+  if(svg.sx == undefined || svg.sy == undefined){
     svg.sx = d3.scaleLinear();
     svg.sy = d3.scaleLinear();
   }
-
   let sx = (x)=>graph.snapToInt ? svg.sx(Math.round(x)) : svg.sx(x);
   let sy = (y)=>graph.snapToInt ? svg.sy(Math.round(y)) : svg.sy(y);
+
   function draw(){
     let nodeRadius = 200 / graph.nodes.length;
     nodeRadius = Math.max(nodeRadius, 4); //clamp to min
@@ -356,12 +357,12 @@ function drawGraph(graph, svg){
   }//draw end
 
   updateScales(graph, svg);
-  updateAxes(svg, svg.sx, svg.sy, false);
+  updateAxes(svg, svg.sx, svg.sy, true);
   draw();
 
   window.addEventListener('resize', ()=>{
     updateScales(graph, svg);
-    updateAxes(svg, svg.sx, svg.sy, false);
+    updateAxes(svg, svg.sx, svg.sy, true);
     draw(sx, sy);
   });
 
