@@ -4,6 +4,10 @@ window.onload = function(){
   let graphTypeSelect = d3.select('#graphType');
   let fn = `data/${graphTypeSelect.node().value}.json`;
 
+  let snapCheckbox = d3.select('#snapCheckbox');
+  let scaleSlider = d3.select('#scaleSlider');
+  let scaleLabel = d3.select('#scaleLabel');
+
   let lrSlider = d3.select('#lr');
   window.lr0 = +Math.exp(lrSlider.node().value);
   window.lr = +Math.exp(lrSlider.node().value);
@@ -195,7 +199,7 @@ window.onload = function(){
         }
         niter -= 1;
         if(niter % 1 == 0){
-          let x_arr = x.arraySync();
+          let x_arr = x.mul(graph.scalingFactor).arraySync();
           updateNodePosition(graph, x_arr);
           drawGraph(graph, svg_graph);
         }
@@ -207,6 +211,7 @@ window.onload = function(){
     
 
     //interactions
+    
     playButton.on('click', function(shouldPlay){
       if(shouldPlay === undefined){
         isPlaying = !isPlaying;
@@ -222,7 +227,7 @@ window.onload = function(){
     });
 
     resetButton.on('click', function(){
-      reset();
+      reset();      
       svg_graph.xDomain = undefined;
       let xy = x.arraySync();
       graph.nodes.forEach((d,i)=>{
@@ -230,7 +235,7 @@ window.onload = function(){
         d.x = xy[i][1];
       });
       dataObj.x = x;
-      drawGraph(svg_graph, graph);
+      drawGraph(graph, svg_graph);
     });
 
     downloadButton.on('click', ()=>{
@@ -266,9 +271,31 @@ window.onload = function(){
       fn = `data/${fn}.json`;
       cancelAnimationFrame(dataObj.animId);
       loadJson(fn);
+
+      snapCheckbox.node().checked = false;
     });
 
-    
+    snapCheckbox.on('click', function(){
+      graph.snapToInt = d3.select(this).node().checked;
+
+      // if(graph.snapToInt){
+      //   graph.nodes.forEach(d=>{
+      //     d.x = Math.round(d.x);
+      //     d.y = Math.round(d.y);
+      //   });
+      //   drawGraph(graph, svg_graph);
+      // }
+      
+      // let newPos = graph.nodes.map(d=>[d.x / graph.scalingFactor, d.y/graph.scalingFactor]);
+      // dataObj.x.assign(tf.tensor2d(newPos));
+    });
+
+
+    scaleSlider.on('input', function(value){
+      value = value || +d3.select(this).node().value;
+      graph.scalingFactor = value;
+      scaleLabel.text(value.toFixed(2));
+    });
 
     lrSlider.on('input', function(value){
       window.lr = value || Math.exp(+d3.select(this).node().value);

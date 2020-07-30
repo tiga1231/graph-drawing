@@ -1,4 +1,8 @@
 function preprocess(graph, initPos){
+  graph.scalingFactor = 1.0;
+  graph.snapToInt = false;
+  graph.center = [graph.width/2||0, graph.height/2||0];
+
   if (initPos !== undefined){
     graph.nodes.forEach((d,i)=>{
       d.x = initPos[i][0];
@@ -625,9 +629,10 @@ function neighbor_loss(pdist, adj, thresh, scale, margin){
 }
 
 
-function center_loss(x){
+function center_loss(x, center){
   return tf.tidy(()=>{
-    return x.mean(0).pow(2).sum();
+    center = tf.tensor(center);
+    return x.sub(center).mean(0).relu().sum();
   });
 }
 
@@ -910,7 +915,7 @@ function trainOneIter(dataObj, optimizer, computeMetric=true){
   let loss = optimizer.minimize(()=>{
     let pdist = pairwise_distance(x);
     let loss = tf.tidy(()=>{
-      let l = center_loss(x);
+      let l = center_loss(x, graph.center);
       
       if(coef.stress > 0){
         let [st, m_st, pdist_normalized] = stress_loss(pdist, graphDistance, stressWeight);

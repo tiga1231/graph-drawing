@@ -2,33 +2,33 @@
 <head>
 
   <!-- Font Awesome -->
-  <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.8.2/css/all.css">
+  <link rel='stylesheet' href='https://use.fontawesome.com/releases/v5.8.2/css/all.css'>
   <!-- Google Fonts -->
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap">
+  <link rel='stylesheet' href='https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap'>
   <!-- Bootstrap core CSS -->
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.4.1/css/bootstrap.min.css" rel="stylesheet">
+  <link href='https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.4.1/css/bootstrap.min.css' rel='stylesheet'>
   <!-- Material Design Bootstrap -->
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/mdbootstrap/4.16.0/css/mdb.min.css" rel="stylesheet">
+  <link href='https://cdnjs.cloudflare.com/ajax/libs/mdbootstrap/4.16.0/css/mdb.min.css' rel='stylesheet'>
   <!-- JQuery -->
-  <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+  <script type='text/javascript' src='https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js'></script>
   <!-- Bootstrap tooltips -->
-  <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.4/umd/popper.min.js"></script>
+  <script type='text/javascript' src='https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.4/umd/popper.min.js'></script>
   <!-- Bootstrap core JavaScript -->
-  <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.4.1/js/bootstrap.min.js"></script>
+  <script type='text/javascript' src='https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.4.1/js/bootstrap.min.js'></script>
   <!-- MDB core JavaScript -->
-  <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mdbootstrap/4.16.0/js/mdb.min.js"></script>
+  <script type='text/javascript' src='https://cdnjs.cloudflare.com/ajax/libs/mdbootstrap/4.16.0/js/mdb.min.js'></script>
 
 
-  <!-- <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous"> -->
-  <!-- <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.2.0/css/all.css" integrity="sha384-hWVjflwFxL6sNzntih27bfxkr27PmbbK/iSvJ+a4+0owXq79v+lsFkW54bOGbiDQ" crossorigin="anonymous"> -->
+  <!-- <link rel='stylesheet' href='https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css' integrity='sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T' crossorigin='anonymous'> -->
+  <!-- <link rel='stylesheet' href='https://use.fontawesome.com/releases/v5.2.0/css/all.css' integrity='sha384-hWVjflwFxL6sNzntih27bfxkr27PmbbK/iSvJ+a4+0owXq79v+lsFkW54bOGbiDQ' crossorigin='anonymous'> -->
   
-  <link rel="stylesheet" href="./index.css">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/numeric/1.2.6/numeric.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/6.6.4/math.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.7.2/dist/tf.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.9.1/underscore-min.js"></script>
+  <link rel='stylesheet' href='./index.css'>
+  <script src='https://cdnjs.cloudflare.com/ajax/libs/numeric/1.2.6/numeric.js'></script>
+  <script src='https://cdnjs.cloudflare.com/ajax/libs/mathjs/6.6.4/math.js'></script>
+  <script src='https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.7.2/dist/tf.min.js'></script>
+  <script src='https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.9.1/underscore-min.js'></script>
 
-  <script src="https://d3js.org/d3.v5.min.js"></script>
+  <script src='https://d3js.org/d3.v5.min.js'></script>
   <script>
   d3.selection.prototype.moveToFront = function() {
     return this.each(function(){
@@ -53,9 +53,9 @@
     </div><!-- 1st col end -->
 
     <div class='col-4'>
-      <i id='play' class="fas fa-pause-circle"></i>
-      <i id='reset' class="fas fa-random"></i>
-      <i id='download' class="fas fa-file-download">
+      <i id='play' class='fas fa-pause-circle'></i>
+      <i id='reset' class='fas fa-random'></i>
+      <i id='download' class='fas fa-file-download'>
         <a id='download-json'></a>
       </i>
 
@@ -63,42 +63,52 @@
 
       <div class='form-group'>
         <label for='graphType'>Graph Type:</label>
+        <select id='graphType' class='form-control'>
+          <option value='custom' disabled hidden> Custom</option> 
 
-        <select id="graphType" class="form-control">
-          <option value="custom" disabled hidden> Custom</option> 
+          <option value='automatic-8_gd'>automatic-8_gd</option>
+          <option value='automatic-9_gd' >automatic-9_gd</option>
 
-          <option value="automatic-8_gd">automatic-8_gd</option>
-          <option value="automatic-9_gd" >automatic-9_gd</option>
+          <option value='k-5'>k-5</option>
+          <option value='complete'>complete</option>
 
-          <option value="k-5">k-5</option>
-          <option value="complete">complete</option>
+          <option value='path-5' >path-5</option>
+          <option value='path-10' >path-10</option>
 
-          <option value="path-5" >path-5</option>
-          <option value="path-10" >path-10</option>
+          <option value='cycle' >cycle</option>
 
-          <option value="cycle" >cycle</option>
-
-          <option value="tree">tree</option>
-          <option value="tree-2-4" selected>tree-2-4</option>
-          <option value="tree-2-5">tree-2-5</option>
+          <option value='tree'>tree</option>
+          <option value='tree-2-4' selected>tree-2-4</option>
+          <option value='tree-2-5'>tree-2-5</option>
           
-          <option value="cube" >cube</option>
-          <option value="dodecahedron">dodecahedron</option>
-          <option value="symmetric">symmetric</option>
+          <option value='cube' >cube</option>
+          <option value='dodecahedron'>dodecahedron</option>
+          <option value='symmetric'>symmetric</option>
 
-          <option value="spx_teaser">spx_teaser</option>
-          <option value="block" >block</option>
-          <option value="bipartite">bipartite</option>
-          <option value="grid" >grid</option>
-          <option value="grid-10-6" >grid-10-6</option>
+          <option value='spx_teaser'>spx_teaser</option>
+          <option value='block' >block</option>
+          <option value='bipartite'>bipartite</option>
+          <option value='grid' >grid</option>
+          <option value='grid-10-6' >grid-10-6</option>
         </select>
+
+        <div class='sliderContainer'>
+          <label for='snapCheckbox'>Snap to Integer Coord:</label>
+          <input id='snapCheckbox' type="checkbox">
+        </div>
+
+        <div class='sliderContainer'>
+          <label for='scaleSlider'>Scale: <span id='scaleLabel'></span></label>
+          <input id='scaleSlider' class='custom-range' type='range' min=0.1 max=20 value=1.0 step=0.001>
+        </div>
+
 
 
         <label for='initOption' style='display: none;'>Init Mode:</label>
-        <select id="initOption" style='display: none;' class="form-control">
-          <option value="random" selected>random</option>
-          <option value="neato" >neato</option>
-          <option value="sfdp">sfdp</option>
+        <select id='initOption' style='display: none;' class='form-control'>
+          <option value='random' selected>random</option>
+          <option value='neato' >neato</option>
+          <option value='sfdp'>sfdp</option>
         </select>
 
 
@@ -108,88 +118,86 @@
 
 
       <div class='form-group'>
-        <form class="range-field my-4 w-100">
+        <form class='range-field my-4 w-100'>
 
           <div class='sliderContainer'>
             <svg class='metric' for='stress'></svg>
             <label for='stressSlider'>Stress <span id='stressLabel'></span></label><br>
-            <input id='stressSlider' class='custom-range' type="range" min=0 max=1 value=0.05 step=0.01>
+            <input id='stressSlider' class='custom-range' type='range' min=0 max=1 value=0.05 step=0.01>
           </div>
 
           <div class='sliderContainer'>
             <svg class='metric' for='upwardness'></svg>
             <label for='upwardnessSlider'>Upwardness <span id='upwardnessLabel'></span></label><br>
-            <input id='upwardnessSlider' class='custom-range' type="range" min=0 max=1 value=0.0 step=0.01>
+            <input id='upwardnessSlider' class='custom-range' type='range' min=0 max=1 value=0.0 step=0.01>
           </div>
 
 
           <div class='sliderContainer'>
             <svg class='metric' for='vertex_resolution'></svg>
             <label for='vertexResolutionSlider'>Vertex Resolution <span id='vertexResolutionLabel'></span></label><br>
-            <input id='vertexResolutionSlider' class='custom-range' type="range" min=0 max=1 value=0.0 step=0.01>
+            <input id='vertexResolutionSlider' class='custom-range' type='range' min=0 max=1 value=0.0 step=0.01>
           </div>
 
           <div class='sliderContainer'>
             <svg class='metric' for='edge_uniformity'></svg>          
             <label for='edgeUniformitySlider'>Edge Uniformity <span id='edgeUniformityLabel'></span></label><br>
-            <input id='edgeUniformitySlider' class='custom-range' type="range" min=0 max=1 value=0.0 step=0.01>
+            <input id='edgeUniformitySlider' class='custom-range' type='range' min=0 max=1 value=0.0 step=0.01>
           </div>
           
           <div class='sliderContainer'>
             <svg class='metric' for='neighbor'></svg>
             <label for='neighborSlider'>Neighborhood Preservation <span id='neighborLabel'></span></label><br>
-            <input id='neighborSlider' class='custom-range' type="range" min=0 max=1 value=0.0 step=0.01>
+            <input id='neighborSlider' class='custom-range' type='range' min=0 max=1 value=0.0 step=0.01>
           </div>
           
           <div class='sliderContainer'>
             <svg class='metric' for='crossing_angle'></svg>
             <label for='crossingAngleSlider'>Crossing Angle <span id='crossingAngleLabel'></span></label><br>
-            <input id='crossingAngleSlider' class='custom-range' type="range" min=0 max=1 value=0 step=0.01>
+            <input id='crossingAngleSlider' class='custom-range' type='range' min=0 max=1 value=0 step=0.01>
           </div>
           
           <div class='sliderContainer'>
             <svg class='metric' for='angular_resolution'></svg>
             <label for='angularResolutionSlider'>Angular Resolution <span id='angularResolutionLabel'></span></label><br>
-            <input id='angularResolutionSlider' class='custom-range' type="range" min=0 max=1 value=0.0 step=0.01>
+            <input id='angularResolutionSlider' class='custom-range' type='range' min=0 max=1 value=0.0 step=0.01>
           </div>
           
           <div class='sliderContainer'>
             <svg class='metric' for='aspect_ratio'></svg>
             <label for='aspectRatioSlider'>Aspect Ratio <span id='aspectRatioLabel'></span></label><br>
-            <input id='aspectRatioSlider' class='custom-range' type="range" min=0 max=1 value=0.0 step=0.01>
+            <input id='aspectRatioSlider' class='custom-range' type='range' min=0 max=1 value=0.0 step=0.01>
           </div>
           
-          <div class='sliderContainer'>
+          <div class='sliderContainer' style='display: none;'>
             <svg class='metric' for='gabriel'></svg>
             <label for='gabrielSlider'>Gabriel <span id='gabrielLabel'></span></label><br>
-            <input id='gabrielSlider' class='custom-range' type="range" min=0 max=1 value=0.0 step=0.01>
-
+            <input id='gabrielSlider' class='custom-range' type='range' min=0 max=1 value=0.0 step=0.01>
           </div>
-          
+
           <div class='sliderContainer'>
             <svg class='metric' for='crossing_number'></svg>
             <label for='crossingNumberSlider'>Crossing Number <span id='crossingNumberLabel'></span></label><br>
-            <input id='crossingNumberSlider' class='custom-range' type="range" min=0 max=1 value=0.0 step=0.01>
+            <input id='crossingNumberSlider' class='custom-range' type='range' min=0 max=1 value=0.0 step=0.01>
           </div>
 
           
-
-          
             <!-- <label for='desiredAreaSlider'>Desired Area <span id='desiredAreaLabel'></span></label>
-            <input id='desiredAreaSlider' class='custom-range' type="range" min=0.1 max=20 value=1.0 step=0.01>
+            <input id='desiredAreaSlider' class='custom-range' type='range' min=0.1 max=20 value=1.0 step=0.01>
             <label for='areaSlider'>Weights <span id='areaLabel'></span></label>
-            <input id='areaSlider' class='custom-range' type="range" min=0 max=1 value=0.0 step=0.01> -->
+            <input id='areaSlider' class='custom-range' type='range' min=0 max=1 value=0.0 step=0.01> -->
 
-            <hr>
-            <label for='lrText'>Learning Rate: <span id='lrText'></span></label><br>
-            <input id='lr' class='custom-range' type="range" min="-6.9" max="-0.7985076962177716" value="-0.80" step="0.01">
+          <hr>
 
-            <label for='momentumText'>Momentum: <span id='momentumText'></span></label><br>
-            <input id='momentum' class='custom-range' type="range" min="0.0" max="0.95" value="0.83" step="0.01">
+          <label for='lrText'>Learning Rate: <span id='lrText'></span></label><br>
+          <input id='lr' class='custom-range' type='range' min='-6.9' max='-0.7985076962177716' value='-0.80' step='0.01'>
 
-            <label for="graphJson">Insert Graph (<a href="http://cgi.cs.arizona.edu/~abureyanahmed/bipartite.json" target=”_blank”>json format</a>):</label>
-            <input type="file" id="graphFile">
-            <textarea id="graphJson" name="graphJson" rows="4" cols="30"></textarea>
+          <label for='momentumText'>Momentum: <span id='momentumText'></span></label><br>
+          <input id='momentum' class='custom-range' type='range' min='0.0' max='0.95' value='0.83' step='0.01'>
+
+          <label for='graphJson'>Insert Graph (<a href='http://cgi.cs.arizona.edu/~abureyanahmed/bipartite.json' target=”_blank”>json format</a>):</label>
+          <input type='file' id='graphFile'>
+          <textarea id='graphJson' name='graphJson' rows='4' cols='30'></textarea>
 
         </form>
       </div>

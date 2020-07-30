@@ -1,8 +1,12 @@
-function updateAxes(svg, sx, sy){
+function updateAxes(svg, sx, sy, intGrid=false){
   let ax = d3.axisBottom(sx)
   .tickSizeInner(-(sy.range()[0]- sy.range()[1]));
   let ay = d3.axisLeft(sy)
   .tickSizeInner(-(sx.range()[1]- sx.range()[0]));
+  if(intGrid){
+    ax.ticks(sx.domain()[1] -  sx.domain()[0]);
+    ay.ticks(sy.domain()[1] -  sy.domain()[0]);
+  }
   let gx = svg.selectAll('.xAxis')
   .data([0,])
   .enter()
@@ -200,8 +204,8 @@ function updateScales(graph, svg){
   let width = svg.node().clientWidth;
   let height = svg.node().clientHeight;
 
-  let xExtent = d3.extent(graph.nodes, d=>d.x);
-  let yExtent = d3.extent(graph.nodes, d=>d.y);
+  let xExtent = d3.extent(graph.nodes, d=>graph.snapToInt ? Math.round(d.x):d.x);
+  let yExtent = d3.extent(graph.nodes, d=>graph.snapToInt ? Math.round(d.y):d.y);
   
   svg.xDomain = xExtent;
   svg.yDomain = yExtent;
@@ -237,6 +241,9 @@ function drawGraph(graph, svg){
     svg.sx = d3.scaleLinear();
     svg.sy = d3.scaleLinear();
   }
+
+  let sx = (x)=>graph.snapToInt ? svg.sx(Math.round(x)) : svg.sx(x);
+  let sy = (y)=>graph.snapToInt ? svg.sy(Math.round(y)) : svg.sy(y);
 
   function draw(){
     let nodeRadius = 200 / graph.nodes.length;
@@ -277,21 +284,21 @@ function drawGraph(graph, svg){
 
     edges = svg.selectAll('.edge')
     .style('stroke', e=>e.target.y > e.source.y ? '#333':'orange')
-    .attr('x1', d=>svg.sx(d.source.x))
-    .attr('y1', d=>svg.sy(d.source.y))
+    .attr('x1', d=>sx(d.source.x))
+    .attr('y1', d=>sy(d.source.y))
     .attr('x2', d=>{
-      let [sx,sy] = [d.source.x, d.source.y];
+      let [sx0,sy0] = [d.source.x, d.source.y];
       let [tx,ty] = [d.target.x, d.target.y];
-      let [dx,dy] = [tx-sx, ty-sy];
+      let [dx,dy] = [tx-sx0, ty-sy0];
       let cos = dx / Math.sqrt(dx*dx + dy*dy);
-      return svg.sx(d.target.x) - nodeRadius*cos * 0.9;
+      return sx(d.target.x) - nodeRadius*cos * 0.9;
     })
     .attr('y2', d=>{
-      let [sx,sy] = [d.source.x, d.source.y];
+      let [sx0,sy0] = [d.source.x, d.source.y];
       let [tx,ty] = [d.target.x, d.target.y];
-      let [dx,dy] = [tx-sx, ty-sy];
+      let [dx,dy] = [tx-sx0, ty-sy0];
       let sin = dy / Math.sqrt(dx*dx + dy*dy);
-      return svg.sy(d.target.y) + nodeRadius*sin * 0.9;
+      return sy(d.target.y) + nodeRadius*sin * 0.9;
     });
 
     svg.selectAll('.node')
@@ -315,7 +322,7 @@ function drawGraph(graph, svg){
         d.x = svg.sx.invert(x);
         d.y = svg.sy.invert(y);
         let newPos = graph.nodes.map(d=>[d.x, d.y]);
-        // dataObj.x.assign(tf.tensor2d(newPos));
+        dataObj.x.assign(tf.tensor2d(newPos));
         draw();
       })
 
@@ -334,7 +341,11 @@ function drawGraph(graph, svg){
     .style('alignment-baseline', 'middle');
 
     let nodes = svg.selectAll('.node')
-    .attr('transform', d=>`translate(${svg.sx(d.x)},${svg.sy(d.y)})`)
+    .attr('transform', d=>{
+      let x = sx(d.x);
+      let y = sy(d.y);
+      return `translate(${x},${y})`;
+    })
     .moveToFront();
 
     let texts = svg.selectAll('.node-id-text')
@@ -346,13 +357,13 @@ function drawGraph(graph, svg){
   }//draw end
 
   updateScales(graph, svg);
-  updateAxes(svg, svg.sx, svg.sy);
+  updateAxes(svg, svg.sx, svg.sy, true);
   draw();
 
   window.addEventListener('resize', ()=>{
     updateScales(graph, svg);
-    updateAxes(svg, svg.sx, svg.sy);
-    draw();
+    updateAxes(svg, svg.sx, svg.sy, true);
+    draw(sx, sy);
   });
 
   
