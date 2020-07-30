@@ -5,9 +5,15 @@ function preprocess(graph, initPos){
       d.y = initPos[i][1];
     });
   }
+
+  let id2node = {};
+  graph.nodes.forEach((d,i)=>{
+    id2node[d.id] = d;
+  });
+
   graph.edges.forEach((d,i)=>{
-    d.source = graph.nodes.filter(e=>e.id==d.source)[0];
-    d.target = graph.nodes.filter(e=>e.id==d.target)[0];
+    d.source = id2node[d.source];
+    d.target = id2node[d.target];
   });
   return graph;
 }
@@ -46,7 +52,7 @@ function stress_loss(pdist, graphDistance, weight){
     // let pdist_normalized = pdist.div(optimalScaling);
     // let metric = pdist_normalized.sub(graphDistance).square().mul(weight).sum().div(2);
     // metric = metric.dataSync()[0];
-    return [loss, 0, 0];
+    return [loss, loss.dataSync()[0], 0];
     // return [loss, metric, pdist_normalized.arraySync()];
   });
 }
@@ -734,7 +740,8 @@ function upwardness_loss(x, graph){
     let target = x.gather(targetIndices);
     let dir = target.sub(source);
     let y = dir.slice([0,1], [edgeCount, 1]);
-    let loss = y.sub(1).mul(-1).relu().pow(2).sum();
+    let loss = y.sub(1).mul(-1).relu();
+    loss = tf.add(loss.pow(2).sum().mul(0.7), loss.sum().mul(0.3));//elastic-net loss
     return [loss, 0.0];
   });
 }
@@ -1011,11 +1018,10 @@ function train(dataObj, remainingIter, optimizers, callback){
   }else{
     let computeMetric = true;//remainingIter % 50 == 0;
     let {loss, metrics} = trainOneIter(dataObj, optimizers[0], computeMetric);
-
     if (callback){
       callback({
         remainingIter,
-        loss: 0.0,//loss.dataSync()[0],
+        loss: loss.dataSync()[0],
         metrics
       });
     }
@@ -1023,7 +1029,7 @@ function train(dataObj, remainingIter, optimizers, callback){
       if(this.t !== undefined){
         let dt = t - this.t;
         let fps = 1000 / dt;
-        console.log(fps.toFixed(2));
+        // console.log(fps.toFixed(2));
       }
       train(dataObj, remainingIter-1, optimizers, callback);
       this.t = t;

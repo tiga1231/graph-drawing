@@ -196,62 +196,54 @@ function updateNodePosition(graph, xy){
 }
 
 
-function drawGraph(svg, graph){
+function updateScales(graph, svg){
+  let width = svg.node().clientWidth;
+  let height = svg.node().clientHeight;
+
+  let xExtent = d3.extent(graph.nodes, d=>d.x);
+  let yExtent = d3.extent(graph.nodes, d=>d.y);
+  
+  svg.xDomain = xExtent;
+  svg.yDomain = yExtent;
+  
+  xExtent = svg.xDomain.slice(0);
+  yExtent = svg.yDomain.slice(0);
+  let xSize = xExtent[1] - xExtent[0];
+  let ySize = yExtent[1] - yExtent[0];
+
+  let xViewport = [30, width-20];
+  let yViewport = [height-20,20];
+  let drawWidth = xViewport[1] - xViewport[0];
+  let drawHeight = yViewport[0] - yViewport[1];
+
+  if (drawWidth/drawHeight > xSize/ySize){
+    let adjust = (ySize / drawHeight * drawWidth) - xSize;
+    xExtent[0] -= adjust/2;
+    xExtent[1] += adjust/2;
+  }else{
+    let adjust = (xSize / drawWidth * drawHeight) - ySize;
+    yExtent[0] -= adjust/2;
+    yExtent[1] += adjust/2;
+  }
+  
+  svg.sx.domain(xExtent)
+  .range(xViewport);
+  svg.sy.domain(yExtent)
+  .range(yViewport);
+}
+
+function drawGraph(graph, svg){
   if(svg.sx == undefined){
     svg.sx = d3.scaleLinear();
     svg.sy = d3.scaleLinear();
   }
 
-  function updateScales(){
-    let width = svg.node().clientWidth;
-    let height = svg.node().clientHeight;
-
-    let xExtent = d3.extent(graph.nodes, d=>d.x);
-    let yExtent = d3.extent(graph.nodes, d=>d.y);
-    
-    // if (svg.xDomain !== undefined){
-    //   svg.xDomain[0] = Math.min(xExtent[0], svg.xDomain[0]);
-    //   svg.xDomain[1] = Math.max(xExtent[1], svg.xDomain[1]);
-    //   svg.yDomain[0] = Math.min(yExtent[0], svg.yDomain[0]);
-    //   svg.yDomain[1] = Math.max(yExtent[1], svg.yDomain[1]);
-    // }else{
-      svg.xDomain = xExtent;
-      svg.yDomain = yExtent;
-    // }
-    
-    xExtent = svg.xDomain.slice(0);
-    yExtent = svg.yDomain.slice(0);
-    let xSize = xExtent[1] - xExtent[0];
-    let ySize = yExtent[1] - yExtent[0];
-
-    let xViewport = [30, width-20];
-    let yViewport = [height-20,20];
-    let drawWidth = xViewport[1] - xViewport[0];
-    let drawHeight = yViewport[0] - yViewport[1];
-
-    if (drawWidth/drawHeight > xSize/ySize){
-      let adjust = (ySize / drawHeight * drawWidth) - xSize;
-      xExtent[0] -= adjust/2;
-      xExtent[1] += adjust/2;
-    }else{
-      let adjust = (xSize / drawWidth * drawHeight) - ySize;
-      yExtent[0] -= adjust/2;
-      yExtent[1] += adjust/2;
-    }
-    
-    svg.sx.domain(xExtent)
-    .range(xViewport);
-    svg.sy.domain(yExtent)
-    .range(yViewport);
-  }
-  
-
   function draw(){
-    let nodeRadius = 200 / window.graph.nodes.length;
-    nodeRadius = Math.max(nodeRadius, 3); //clamp to min
-    nodeRadius = Math.min(nodeRadius, 10); //clamp to max
+    let nodeRadius = 200 / graph.nodes.length;
+    nodeRadius = Math.max(nodeRadius, 4); //clamp to min
+    nodeRadius = Math.min(nodeRadius, 12); //clamp to max
 
-    let arrowheadSize = 2;
+    let arrowheadSize = 1.5;
     let a = arrowheadSize;
     svg.selectAll('#triangle')
     .data([0])
@@ -269,22 +261,22 @@ function drawGraph(svg, graph){
     .style('fill', '#333');
 
     svg.selectAll('.edge')
-    .data(window.graph.edges)
+    .data(graph.edges)
     .exit()
     .remove();
 
     let edges = svg.selectAll('.edge')
-    .data(window.graph.edges)
+    .data(graph.edges)
     .enter()
     .append('line')
     .attr('class', 'edge')
     .attr('fill', 'none')
-    .attr('stroke', '#333')
     .attr('stroke-width', 2)
     .attr('marker-end', 'url(#triangle)')
     .attr('opacity', 0.8);
 
     edges = svg.selectAll('.edge')
+    .style('stroke', e=>e.target.y > e.source.y ? '#333':'orange')
     .attr('x1', d=>svg.sx(d.source.x))
     .attr('y1', d=>svg.sy(d.source.y))
     .attr('x2', d=>{
@@ -300,16 +292,15 @@ function drawGraph(svg, graph){
       let [dx,dy] = [tx-sx, ty-sy];
       let sin = dy / Math.sqrt(dx*dx + dy*dy);
       return svg.sy(d.target.y) + nodeRadius*sin * 0.9;
-
     });
 
     svg.selectAll('.node')
-    .data(window.graph.nodes)
+    .data(graph.nodes)
     .exit()
     .remove();
 
     let newNodes = svg.selectAll('.node')
-    .data(window.graph.nodes)
+    .data(graph.nodes)
     .enter()
     .append('g')
     .attr('class', 'node')
@@ -323,8 +314,8 @@ function drawGraph(svg, graph){
         let dy = d3.event.dy;
         d.x = svg.sx.invert(x);
         d.y = svg.sy.invert(y);
-        let newPos = window.graph.nodes.map(d=>[d.x, d.y]);
-        dataObj.x.assign(tf.tensor2d(newPos));
+        let newPos = graph.nodes.map(d=>[d.x, d.y]);
+        // dataObj.x.assign(tf.tensor2d(newPos));
         draw();
       })
 
@@ -347,22 +338,24 @@ function drawGraph(svg, graph){
     .moveToFront();
 
     let texts = svg.selectAll('.node-id-text')
-    .data(window.graph.nodes)
+    .data(graph.nodes)
     .text(d=>d.id);
     
     let circles = nodes.selectAll('circle')
     .attr('r', nodeRadius);
-  }
+  }//draw end
+
+  updateScales(graph, svg);
+  updateAxes(svg, svg.sx, svg.sy);
+  draw();
 
   window.addEventListener('resize', ()=>{
-    updateScales();
+    updateScales(graph, svg);
     updateAxes(svg, svg.sx, svg.sy);
     draw();
   });
 
-  updateScales();
-  updateAxes(svg, svg.sx, svg.sy);
-  draw();
+  
 }//drawGraph end
 
 

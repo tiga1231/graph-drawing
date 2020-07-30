@@ -39,12 +39,6 @@ window.onload = function(){
   let aspectRatioSlider = d3.select('#aspectRatioSlider');
   let aspectRatioLabel = d3.select('#aspectRatioLabel');
 
-  // let areaSlider = d3.select('#areaSlider');
-  // let areaLabel = d3.select('#areaLabel');
-  // let desiredAreaSlider = d3.select('#desiredAreaSlider');
-  // let desiredAreaLabel = d3.select('#desiredAreaLabel');
-
-
   let coef = {
     stress: +stressSlider.node().value,
     crossing_angle: +crossingAngleSlider.node().value,
@@ -56,14 +50,11 @@ window.onload = function(){
     gabriel: +gabrielSlider.node().value,
     aspect_ratio: +aspectRatioSlider.node().value,
     upwardness: +upwardnessSlider.node().value,
-    // area: (areaSlider.node() !== null ? +areaSlider.node().value : 0.0),
   };
 
   let sampleSize = 5;
- 
-
   let maxPlotIter = 50;
-  let niter = 20000;
+  let niter = 200000;
   let maxMetricSize = 10;
 
   let optimizers = [tf.train.momentum(lr, momentum, false)];
@@ -146,10 +137,11 @@ window.onload = function(){
         lrSlider.on('input')(lr0);
       }
     }
-    
     reset();
+
     optimizers[0] = tf.train.momentum(lr, momentum, false);
     preprocess(graph, x.arraySync());
+
 
     let n_neighbors = graph.graphDistance
     .map((row)=>{
@@ -181,7 +173,6 @@ window.onload = function(){
 
     function play(){
       train(dataObj, niter, optimizers, (record)=>{
-        // console.log(record);
         metrics.push(record.metrics);
         losses.push(record.loss);
         if (losses.length>maxPlotIter){
@@ -192,7 +183,6 @@ window.onload = function(){
         }
         traceLoss(svg_loss, losses, maxPlotIter);
         traceMetrics(svg_metrics, metrics, maxMetricSize);
-        window.metrics = metrics;
         if (losses.length >= 10){
           let n = losses.length;
           let firstSlice = losses.slice(Math.floor(n/2), Math.floor(n/4*3));
@@ -200,18 +190,22 @@ window.onload = function(){
           let avgLoss0 = math.mean(firstSlice);
           let avgLoss1 = math.mean(secondSlice);
           if(avgLoss1 > avgLoss0){
-            lrSlider.on('input')(Math.max(lr/1.01, 0.001 ));
+            lrSlider.on('input')(Math.max(lr*0.999, 0.001));
           }
         }
         niter -= 1;
         if(niter % 1 == 0){
-          updateNodePosition(graph, x.arraySync());
-          drawGraph(svg_graph, graph);
+          let x_arr = x.arraySync();
+          updateNodePosition(graph, x_arr);
+          drawGraph(graph, svg_graph);
         }
       });
     }
     play();
+    // 
+    // let simulation = initSimulation(graph, graph.graphDistance, svg_graph);
     
+
     //interactions
     playButton.on('click', function(shouldPlay){
       if(shouldPlay === undefined){
@@ -262,7 +256,6 @@ window.onload = function(){
       // anchor.setAttribute('href', dataStr);
       // anchor.setAttribute('download', file_name);
       // anchor.click();
-      
 
       // download PNG:
       downloadPNG();
@@ -273,8 +266,6 @@ window.onload = function(){
       fn = `data/${fn}.json`;
       cancelAnimationFrame(dataObj.animId);
       loadJson(fn);
-
-
     });
 
     
@@ -334,20 +325,6 @@ window.onload = function(){
     });
     angularResolutionSlider.on('input')();
 
-    // areaSlider.on('input', function(){
-    //   let value = +areaSlider.node().value;
-    //   areaLabel.text(value.toFixed(2));
-    //   coef['area'] = value;
-    // });
-    // areaSlider.on('input')();
-    // desiredAreaSlider.on('input', function(){
-    //   let value = +desiredAreaSlider.node().value;
-    //   desiredAreaLabel.text(value.toFixed(2));
-    //   dataObj['desiredArea'] = value;
-    // });
-    // desiredAreaSlider.on('input')();
-
-
     vertexResolutionSlider.on('input', function(){
       let value = +vertexResolutionSlider.node().value;
       vertexResolutionLabel.text(value.toFixed(2));
@@ -386,12 +363,6 @@ window.onload = function(){
 
   loadJson(fn);
 };//onload end
-
-
-
-
-
-
 
 
 // donwload svg as png:
@@ -466,7 +437,6 @@ function downloadPNG(){
 
   setTimeout(()=>{
     context.drawImage(image, 0, 0);
-    // console.log(canvas.node().toDataURL('image/png'));
     var a = d3.select('body').append('a');
     a.node().download = "image.png";
     a.node().href = canvas.node().toDataURL('image/png');
