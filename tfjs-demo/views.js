@@ -4,8 +4,8 @@ function updateAxes(svg, sx, sy, intGrid=false){
   let ay = d3.axisLeft(sy)
   .tickSizeInner(-(sx.range()[1]- sx.range()[0]));
   if(intGrid){
-    ax.ticks(sx.domain()[1] -  sx.domain()[0]);
-    ay.ticks(sy.domain()[1] -  sy.domain()[0]);
+    ax.ticks(Math.min(500, sx.domain()[1] -  sx.domain()[0]));
+    ay.ticks(Math.min(500, sy.domain()[1] -  sy.domain()[0]));
   }
   let gx = svg.selectAll('.xAxis')
   .data([0,])
