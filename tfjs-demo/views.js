@@ -201,7 +201,6 @@ function updateNodePosition(graph, xy){
 
 
 function updateScales(graph, svg){
-  console.log('updateScales');
   let width = svg.node().clientWidth;
   let height = svg.node().clientHeight;
 
@@ -250,7 +249,9 @@ function drawGraph(graph, svg){
     nodeRadius = Math.max(nodeRadius, 4); //clamp to min
     nodeRadius = Math.min(nodeRadius, 12); //clamp to max
 
-    let arrowheadSize = 1.5;
+    // let arrowheadSize = 1.5;
+    let arrowheadSize = 0;
+
     let a = arrowheadSize;
     svg.selectAll('#triangle')
     .data([0])
@@ -283,7 +284,8 @@ function drawGraph(graph, svg){
     .attr('opacity', 0.8);
 
     edges = svg.selectAll('.edge')
-    .style('stroke', e=>e.target.y > e.source.y ? '#333':'orange')
+    // .style('stroke', e=>e.target.y > e.source.y ? '#333':'orange')
+    .style('stroke', '#333')
     .attr('x1', d=>sx(d.source.x))
     .attr('y1', d=>sy(d.source.y))
     .attr('x2', d=>{
@@ -310,7 +312,8 @@ function drawGraph(graph, svg){
     .data(graph.nodes)
     .enter()
     .append('g')
-    .attr('class', 'node')
+    .attr('class', 'node');
+    svg.selectAll('.node')
     .call(
       d3.drag()
       .on('drag', (d)=>{

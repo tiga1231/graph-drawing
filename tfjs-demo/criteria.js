@@ -619,8 +619,14 @@ function neighbor_loss(pdist, adj, thresh, scale, margin){
     let truth = adj;
     let mask = tf.scalar(1.0).sub(tf.eye(pdist.shape[0]));
     // let pred = pdist.sub( thresh ).mul(-1);
-    let pred = pdist.sub( thresh.clipByValue(0.2, 1.0) ).mul(-1);
+    
+    // let pred = pdist.sub( thresh.clipByValue(0.2, 1.0) ).mul(-1);
+    let pred = pdist
+    .sub( thresh.clipByValue(0.01, 50.0) )
+    .div( thresh.clipByValue(0.01, 50.0) )
+    .mul(-1);
     let loss = lovaszHingeLoss(pred, truth.arraySync());
+
 
     let pred2 = pdist.sub(thresh).mul(-1).mul(mask);
     let metric = jaccardIndex(pred2.arraySync(), truth.arraySync());

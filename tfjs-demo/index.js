@@ -140,6 +140,7 @@ window.onload = function(){
       if(lrSlider.on('input')){
         lrSlider.on('input')(lr0);
       }
+      return x;
     }
     reset();
 
@@ -227,7 +228,7 @@ window.onload = function(){
     });
 
     resetButton.on('click', function(){
-      reset();      
+      let x = reset();      
       svg_graph.xDomain = undefined;
       let xy = x.arraySync();
       graph.nodes.forEach((d,i)=>{
