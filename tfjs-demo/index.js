@@ -168,9 +168,9 @@ window.onload = function(){
             let secondSlice = losses.slice(Math.floor(n/4*3), n);
             let avgLoss0 = math.mean(firstSlice);
             let avgLoss1 = math.mean(secondSlice);
-            if(avgLoss1 > avgLoss0){
-              lrSlider.on('input')(Math.max(lr/1.01, 0.001 ));
-            }
+            // if(avgLoss1 > avgLoss0){
+            //   lrSlider.on('input')(Math.max(lr/1.01, 0.001 ));
+            // }
           }
           updateNodePosition(graph, x.arraySync());
           drawGraph(svg_graph, graph);
