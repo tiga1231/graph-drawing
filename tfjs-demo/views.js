@@ -204,8 +204,8 @@ function updateScales(graph, svg){
   let width = svg.node().clientWidth;
   let height = svg.node().clientHeight;
 
-  let xExtent = d3.extent(graph.nodes, d=>graph.snapToInt ? Math.round(d.x):d.x);
-  let yExtent = d3.extent(graph.nodes, d=>graph.snapToInt ? Math.round(d.y):d.y);
+  let xExtent = d3.extent(graph.nodes, d=>d.x);
+  let yExtent = d3.extent(graph.nodes, d=>d.y);
   
   svg.xDomain = xExtent;
   svg.yDomain = yExtent;
@@ -241,31 +241,35 @@ function drawGraph(graph, svg){
     svg.sx = d3.scaleLinear();
     svg.sy = d3.scaleLinear();
   }
-  let sx = (x)=>graph.snapToInt ? svg.sx(Math.round(x)) : svg.sx(x);
-  let sy = (y)=>graph.snapToInt ? svg.sy(Math.round(y)) : svg.sy(y);
+  // let sx = (x)=>svg.sx(x);
+  // let sy = (y)=>svg.sy(y);
 
   function draw(){
-    let nodeRadius = 200 / graph.nodes.length;
+    let nodeRadius = 250 / graph.nodes.length;
     nodeRadius = Math.max(nodeRadius, 4); //clamp to min
-    nodeRadius = Math.min(nodeRadius, 12); //clamp to max
+    nodeRadius = Math.min(nodeRadius, 16); //clamp to max
 
-    // let arrowheadSize = 1.5;
-    let arrowheadSize = 0;
-
+    let arrowheadSize = 1.5;
+    // let arrowheadSize = 0;
     let a = arrowheadSize;
+    let r = nodeRadius;
+    
     svg.selectAll('#triangle')
     .data([0])
     .enter()
     .append('svg:defs')
-    .append('svg:marker')
-    .attr('id', 'triangle')
-    .attr('refX', arrowheadSize*2)
-    .attr('refY', arrowheadSize)
-    .attr('markerWidth', arrowheadSize*2)
-    .attr('markerHeight', arrowheadSize*2)
+    .append('marker')
+    .attr('id', 'triangle');
+    
+    svg.selectAll('#triangle')
+    .attr('refX', 2*a+r/2-1)
+    .attr('refY', a)
+    .attr('markerWidth', a*2)
+    .attr('markerHeight', a*2)
     .attr('orient', 'auto')
     .append('path')
-    .attr('d', `M 0 0 L ${a*2} ${a} L 0 ${a*2} L ${a/2} ${a} Z`)
+    // .attr('d', `M 0 0 L ${2*a} ${a} L 0 ${2*a} L ${0.5*a} ${a} Z`)
+    .attr('d', `M 0 0 L ${2*a} ${a} L 0 ${2*a} L ${0.5*a} ${a} Z`)
     .style('fill', '#333');
 
     svg.selectAll('.edge')
@@ -284,23 +288,16 @@ function drawGraph(graph, svg){
     .attr('opacity', 0.8);
 
     edges = svg.selectAll('.edge')
-    // .style('stroke', e=>e.target.y > e.source.y ? '#333':'orange')
-    .style('stroke', '#333')
-    .attr('x1', d=>sx(d.source.x))
-    .attr('y1', d=>sy(d.source.y))
+    .style('stroke', e=>e.target.y > e.source.y ? '#333':'orange')
+    // .style('stroke', '#333')
+    .style('stroke-linecap', 'butt')
+    .attr('x1', d=>svg.sx(d.source.x))
+    .attr('y1', d=>svg.sy(d.source.y))
     .attr('x2', d=>{
-      let [sx0,sy0] = [d.source.x, d.source.y];
-      let [tx,ty] = [d.target.x, d.target.y];
-      let [dx,dy] = [tx-sx0, ty-sy0];
-      let cos = dx / Math.sqrt(dx*dx + dy*dy);
-      return sx(d.target.x) - nodeRadius*cos * 0.9;
+      return svg.sx(d.target.x);
     })
     .attr('y2', d=>{
-      let [sx0,sy0] = [d.source.x, d.source.y];
-      let [tx,ty] = [d.target.x, d.target.y];
-      let [dx,dy] = [tx-sx0, ty-sy0];
-      let sin = dy / Math.sqrt(dx*dx + dy*dy);
-      return sy(d.target.y) + nodeRadius*sin * 0.9;
+      return svg.sy(d.target.y);
     });
 
     svg.selectAll('.node')
@@ -308,6 +305,7 @@ function drawGraph(graph, svg){
     .exit()
     .remove();
 
+    let isPlaying0;
     let newNodes = svg.selectAll('.node')
     .data(graph.nodes)
     .enter()
@@ -316,7 +314,11 @@ function drawGraph(graph, svg){
     svg.selectAll('.node')
     .call(
       d3.drag()
-      .on('drag', (d)=>{
+      .on('start', ()=>{
+        isPlaying0 = isPlaying;
+        playButton.on('click')(false);
+      })
+      .on('drag', (d,i)=>{
         boundaries = undefined;
         let x = d3.event.sourceEvent.offsetX;
         let y = d3.event.sourceEvent.offsetY;
@@ -324,9 +326,22 @@ function drawGraph(graph, svg){
         let dy = d3.event.dy;
         d.x = svg.sx.invert(x);
         d.y = svg.sy.invert(y);
-        let newPos = graph.nodes.map(d=>[d.x / graph.scalingFactor, d.y / graph.scalingFactor]);
-        dataObj.x.assign(tf.tensor2d(newPos));
+
+        dataObj.x_arr[d.index] = [d.x/graph.scalingFactor+graph.xmin, d.y/graph.scalingFactor + graph.ymin];
+        dataObj.x.assign(tf.tensor2d(dataObj.x_arr));
         draw();
+      })
+      .on('end', (d,i)=>{
+        dataObj.x_arr[d.index] = [d.x/graph.scalingFactor+graph.xmin, d.y/graph.scalingFactor+graph.ymin];
+        dataObj.x.assign(tf.tensor2d(dataObj.x_arr));
+        if(graph.snapToInt){
+          d.x = Math.round(d.x);
+          d.y = Math.round(d.y);
+          draw();
+        }
+        playButton.on('click')(isPlaying0);
+        // let newPos = graph.nodes.map(d=>[d.x, d.y]);
+        // dataObj.x.assign(tf.tensor2d(newPos).div(graph.scalingFactor));
       })
 
     );
@@ -345,8 +360,8 @@ function drawGraph(graph, svg){
 
     let nodes = svg.selectAll('.node')
     .attr('transform', d=>{
-      let x = sx(d.x);
-      let y = sy(d.y);
+      let x = svg.sx(d.x);
+      let y = svg.sy(d.y);
       return `translate(${x},${y})`;
     })
     .moveToFront();
@@ -366,7 +381,7 @@ function drawGraph(graph, svg){
   window.addEventListener('resize', ()=>{
     updateScales(graph, svg);
     updateAxes(svg, svg.sx, svg.sy, true);
-    draw(sx, sy);
+    draw();
   });
 
   
@@ -375,8 +390,8 @@ function drawGraph(graph, svg){
 
 function updateSvgSize(svg_loss, svg_graph){
   let width =  window.innerWidth/12*8 - 50;
-  let height_graph =  window.innerHeight/3*2-20;
-  let height_loss =  window.innerHeight/3*1-20;
+  let height_graph =  window.innerHeight/6*5-20;
+  let height_loss =  window.innerHeight/6*1-20;
   svg_loss
   .attr('width', '100%')
   .attr('height', height_loss);

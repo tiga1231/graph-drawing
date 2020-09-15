@@ -1,8 +1,12 @@
 // main
 let isPlaying = true;
+let dataRoot = './data/contest-prep-1';
+// let dataRoot = './data/contest-1';
+// let dataRoot = './data';
+
 window.onload = function(){
   let graphTypeSelect = d3.select('#graphType');
-  let fn = `data/${graphTypeSelect.node().value}.json`;
+  let fn = `${dataRoot}/${graphTypeSelect.node().value}.json`;
 
   let snapCheckbox = d3.select('#snapCheckbox');
   let scaleSlider = d3.select('#scaleSlider');
@@ -72,6 +76,7 @@ window.onload = function(){
   .style('background-color', '#f3f3f3');
 
   let svg_graph = d3.select('#graph');
+  window.svg_graph = svg_graph;
 
   let svg_metrics = d3.selectAll('.metric');
 
@@ -105,10 +110,11 @@ window.onload = function(){
     let file = event.target.files[0];
     let reader = new FileReader();
     reader.addEventListener('load', (event) => {
+      cancelAnimationFrame(dataObj.animId);
+
       let text = event.target.result;
       let graph = JSON.parse(text);
       window.graph = graph;
-      cancelAnimationFrame(dataObj.animId);
       loadGraph(graph);
       graphJson.node().value = text;
       graphTypeSelect.node().value = 'custom';
@@ -178,29 +184,30 @@ window.onload = function(){
 
     function play(){
       train(dataObj, niter, optimizers, (record)=>{
-        metrics.push(record.metrics);
-        losses.push(record.loss);
-        if (losses.length>maxPlotIter){
-          losses = losses.slice(losses.length-maxPlotIter);
-        }
-        if (metrics.length > maxMetricSize){
-          metrics = metrics.slice(metrics.length-maxMetricSize);
-        }
-        traceLoss(svg_loss, losses, maxPlotIter);
-        traceMetrics(svg_metrics, metrics, maxMetricSize);
-        if (losses.length >= 10){
-          let n = losses.length;
-          let firstSlice = losses.slice(Math.floor(n/2), Math.floor(n/4*3));
-          let secondSlice = losses.slice(Math.floor(n/4*3), n);
-          let avgLoss0 = math.mean(firstSlice);
-          let avgLoss1 = math.mean(secondSlice);
-          if(avgLoss1 > avgLoss0){
-            lrSlider.on('input')(Math.max(lr*0.999, 0.001));
-          }
-        }
+        // metrics.push(record.metrics);
+        // losses.push(record.loss);
+        // if (losses.length>maxPlotIter){
+        //   losses = losses.slice(losses.length-maxPlotIter);
+        // }
+        // if (metrics.length > maxMetricSize){
+        //   metrics = metrics.slice(metrics.length-maxMetricSize);
+        // }
+        // traceLoss(svg_loss, losses, maxPlotIter);
+        // traceMetrics(svg_metrics, metrics, maxMetricSize);
+        // if (losses.length >= 10){
+        //   let n = losses.length;
+        //   let firstSlice = losses.slice(Math.floor(n/2), Math.floor(n/4*3));
+        //   let secondSlice = losses.slice(Math.floor(n/4*3), n);
+        //   let avgLoss0 = math.mean(firstSlice);
+        //   let avgLoss1 = math.mean(secondSlice);
+        //   if(avgLoss1 > avgLoss0){
+        //     lrSlider.on('input')(Math.max(lr*0.999, 0.001));
+        //   }
+        // }
         niter -= 1;
-        if(niter % 1 == 0){
-          let x_arr = x.mul(graph.scalingFactor).arraySync();
+        if(niter % 3 == 0){
+          dataObj.x_arr = x.arraySync();
+          let x_arr = postprocess(dataObj.x_arr, graph);
           updateNodePosition(graph, x_arr);
           drawGraph(graph, svg_graph);
         }
@@ -241,44 +248,46 @@ window.onload = function(){
 
     downloadButton.on('click', ()=>{
 
-      //download json
-      // let res = {};
-      // res.nodes = graph.nodes;
-      // res.edges = graph.edges.map(d=>({
-      //   source: d.source.id, 
-      //   target: d.target.id,
-      // }));
-      // res.coef = coef;
-      // res.optimizer = {
-      //   lr: optimizers[0].learningRate, 
-      //   momentum: optimizers[0].momentum
-      // };
-      // res.graphDistance = graph.graphDistance;
-      // res.weight = graph.weight;
-      // let res_json = JSON.stringify(res, null, 2);
-      // let file_name = `${graphTypeSelect.node().value}.json`;
-      // let dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(res_json);
-      // var anchor = document.getElementById('download-json');
-      // anchor.setAttribute('href', dataStr);
-      // anchor.setAttribute('download', file_name);
-      // anchor.click();
+      // download json
+      let output = {};
+      output.nodes = graph.nodes.map(d=>{
+        return {
+          id: d.id,
+          x: d.x,
+          y: d.y
+        }
+      });
+      output.edges = graph.edges.map(e=>{
+        return {
+          source: e.source.id,
+          target: e.target.id,
+        };
+      });
+      output.width = graph.width;
+      output.height = graph.height;
+
+      let fn_out = `${graphTypeSelect.node().value}-out.json`;
+      exportJson(output, fn_out);
+
 
       // download PNG:
-      downloadPNG();
+      // downloadPNG();
     });
 
     graphTypeSelect.on('change', function(){
       let fn = d3.select(this).node().value;
-      fn = `data/${fn}.json`;
+      fn = `${dataRoot}/${fn}.json`;
       cancelAnimationFrame(dataObj.animId);
       loadJson(fn);
-
       snapCheckbox.node().checked = false;
     });
 
+
     snapCheckbox.on('click', function(){
       graph.snapToInt = d3.select(this).node().checked;
-
+      let x_arr = postprocess(dataObj.x_arr, graph);
+      updateNodePosition(graph, x_arr);
+      drawGraph(graph, svg_graph);
     });
 
 
@@ -286,6 +295,9 @@ window.onload = function(){
       value = value || +d3.select(this).node().value;
       graph.scalingFactor = value;
       scaleLabel.text(value.toFixed(2));
+      let x_arr = postprocess(dataObj.x_arr, graph);
+      updateNodePosition(graph, x_arr);
+      drawGraph(graph, svg_graph);
     });
 
     lrSlider.on('input', function(value){
@@ -467,3 +479,13 @@ function downloadPNG(){
 }
 
 
+
+//// export JSON
+function exportJson(obj, fn='result.json'){
+  let objStr = JSON.stringify(obj, null, 2);
+  let dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(objStr);
+  var anchor = document.getElementById('download-json');
+  anchor.setAttribute('href', dataStr);
+  anchor.setAttribute('download', fn);
+  anchor.click();
+}

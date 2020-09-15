@@ -66,7 +66,12 @@
         <select id='graphType' class='form-control'>
           <option value='custom' disabled hidden> Custom</option> 
 
-          <option value='automatic-8_gd'>automatic-8_gd</option>
+          <option value='test-1'>test-1</option>
+          <option value='test-2'>test-2</option>
+          <option value='test-3'>test-3</option>
+          <option value='test-4'>test-4</option>
+
+          <!-- <option value='automatic-8_gd'>automatic-8_gd</option>
           <option value='automatic-9_gd' >automatic-9_gd</option>
 
           <option value='k-5'>k-5</option>
@@ -89,7 +94,7 @@
           <option value='block' >block</option>
           <option value='bipartite'>bipartite</option>
           <option value='grid' >grid</option>
-          <option value='grid-10-6' >grid-10-6</option>
+          <option value='grid-10-6' >grid-10-6</option> -->
         </select>
 
         <div class='sliderContainer'>
@@ -102,15 +107,12 @@
           <input id='scaleSlider' class='custom-range' type='range' min=0.1 max=20 value=1.0 step=0.001>
         </div>
 
-
-
         <label for='initOption' style='display: none;'>Init Mode:</label>
         <select id='initOption' style='display: none;' class='form-control'>
           <option value='random' selected>random</option>
           <option value='neato' >neato</option>
           <option value='sfdp'>sfdp</option>
         </select>
-
 
       </div>
 
@@ -123,13 +125,13 @@
           <div class='sliderContainer'>
             <svg class='metric' for='stress'></svg>
             <label for='stressSlider'>Stress <span id='stressLabel'></span></label><br>
-            <input id='stressSlider' class='custom-range' type='range' min=0 max=1 value=0.05 step=0.01>
+            <input id='stressSlider' class='custom-range' type='range' min=0 max=1 value=0.17 step=0.01>
           </div>
 
           <div class='sliderContainer'>
             <svg class='metric' for='upwardness'></svg>
             <label for='upwardnessSlider'>Upwardness <span id='upwardnessLabel'></span></label><br>
-            <input id='upwardnessSlider' class='custom-range' type='range' min=0 max=1 value=0.0 step=0.01>
+            <input id='upwardnessSlider' class='custom-range' type='range' min=0 max=1 value=0.03 step=0.01>
           </div>
 
 
@@ -185,8 +187,8 @@
             <!-- <label for='desiredAreaSlider'>Desired Area <span id='desiredAreaLabel'></span></label>
             <input id='desiredAreaSlider' class='custom-range' type='range' min=0.1 max=20 value=1.0 step=0.01>
             <label for='areaSlider'>Weights <span id='areaLabel'></span></label>
-            <input id='areaSlider' class='custom-range' type='range' min=0 max=1 value=0.0 step=0.01> -->
-
+            <input id='areaSlider' class='custom-range' type='range' min=0 max=1 value=0.0 step=0.01>
+            -->
           <hr>
 
           <label for='lrText'>Learning Rate: <span id='lrText'></span></label><br>

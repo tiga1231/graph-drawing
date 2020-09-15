@@ -1,6 +1,13 @@
 function preprocess(graph, initPos){
   graph.scalingFactor = 1.0;
   graph.snapToInt = false;
+  console.log(`[w,h] = [${graph.width},${graph.height}]`);
+  if(!graph.hasOwnProperty('width')){
+    graph.width = 1e6;
+  }
+  if(!graph.hasOwnProperty('height')){
+    graph.height = 1e6;
+  }
   graph.center = [graph.width/2||0, graph.height/2||0];
 
   if (initPos !== undefined){
@@ -21,6 +28,25 @@ function preprocess(graph, initPos){
   });
   return graph;
 }
+
+function postprocess(x, graph){
+  graph.xmin = d3.min(x, d=>d[0]);
+  graph.ymin = d3.min(x, d=>d[1]);
+
+  let y = x.map(d=>{
+    d = d.slice();
+    d[0] = (d[0] - graph.xmin) * graph.scalingFactor;
+    d[1] = (d[1] - graph.ymin) * graph.scalingFactor;
+    if(graph.snapToInt){
+      d[0] = Math.round(d[0]);
+      d[1] = Math.round(d[1]);
+    }
+    return d;
+  });
+  return y;
+}
+
+
 
 
 function randInt(a,b){
@@ -638,10 +664,18 @@ function neighbor_loss(pdist, adj, thresh, scale, margin){
 function center_loss(x, center){
   return tf.tidy(()=>{
     center = tf.tensor(center);
-    return x.sub(center).mean(0).relu().sum();
+    return x.mean(0).sub(center).div(center).pow(2).sum();
   });
 }
 
+
+function boundary_loss(xy, xyMin, xyMax){
+  return tf.tidy(()=>{
+    let lossLeft = xy.sub(tf.tensor(xyMin)).mul(-1).relu().pow(2).sum();
+    let lossRight = xy.sub(tf.tensor(xyMax)).relu().pow(2).sum();
+    return lossLeft.add(lossRight);
+  });
+}
 
 let boundaries = undefined;
 let boundary_lr = 0.15;
@@ -921,8 +955,15 @@ function trainOneIter(dataObj, optimizer, computeMetric=true){
   let loss = optimizer.minimize(()=>{
     let pdist = pairwise_distance(x);
     let loss = tf.tidy(()=>{
-      let l = center_loss(x, graph.center);
-      
+
+      let vmin = [0, 0];
+      let vmax = [dataObj.graph.width, dataObj.graph.height];
+
+      // let l = center_loss(x, graph.center)
+      // .add(boundary_loss(x, vmin, vmax));
+      // let l = boundary_loss(x, vmin, vmax);
+      let l = tf.scalar(0);
+
       if(coef.stress > 0){
         let [st, m_st, pdist_normalized] = stress_loss(pdist, graphDistance, stressWeight);
         metrics.stress = m_st;
@@ -1027,12 +1068,12 @@ function train(dataObj, remainingIter, optimizers, callback){
     console.log('Max iteration reached, please double click the play button to restart');
     window.playButton.on('click')(false);
   }else{
-    let computeMetric = true;//remainingIter % 50 == 0;
+    let computeMetric = false;//remainingIter % 50 == 0;
     let {loss, metrics} = trainOneIter(dataObj, optimizers[0], computeMetric);
     if (callback){
       callback({
         remainingIter,
-        loss: loss.dataSync()[0],
+        loss: 0,//loss.dataSync()[0],
         metrics
       });
     }
