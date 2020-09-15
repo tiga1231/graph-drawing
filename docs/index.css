@@ -1,0 +1,128 @@
+:root {
+  --axis-color: #555;
+  --svg-background: #f3f3f3;
+}
+
+.btn{
+  padding: 6px 12px;
+}
+
+body{
+  margin: 10px;
+}
+
+.fas {
+  font-size: 2rem;
+}
+
+.fa-file-download{
+  margin-left: 2rem;
+}
+
+
+#graphType{
+  width: 70%;
+}
+
+svg {
+  margin-bottom: 10px;
+  border-radius: 10px;
+  /*background-color: var(--svg-background);*/
+  background-color: #f3f3f3;
+}
+
+
+svg text{
+  /*fill: var(--axis-color);*/
+  fill: #555;
+  font-family: "Roboto", sans-serif;
+  font-weight: 300;
+}
+
+
+svg text, .fas{
+  -webkit-user-select: none;
+     -moz-user-select: none;
+      -ms-user-select: none;
+          user-select: none;
+}
+
+
+svg line, svg path.domain{
+  /*stroke: var(--axis-color);*/
+  stroke: #555;
+}
+
+
+.tick line{
+  stroke: #aaa;
+  stroke-width: 0.6;
+  stroke-dasharray: 4 1;
+}
+
+label {
+  margin-bottom: 0;
+  /*margin-top: .6rem;*/
+}
+
+.custom-range{
+  height: 1.2rem;
+  width: 100%;
+}
+
+.sliderContainer{
+  padding-top: 0.6rem;
+}
+
+svg.metric{
+  /*float: right;*/
+  border-radius: 2px;
+  width: 10%;
+  height: 1.2rem;
+  margin: 0;
+}
+.metric-line{
+  fill:#1f78b4;
+}
+
+
+.tool-tip{
+  alignment-baseline: middle;
+  font-size: 0.5rem;
+  text-anchor: middle;
+  mix-blend-mode: difference;
+}
+
+
+/* Show the tooltip text when you mouse over the tooltip container */
+.tooltip:hover .tooltiptext {
+  visibility: visible;
+}
+
+/*https://www.w3schools.com/howto/howto_js_rangeslider.asp*/
+/*.slider {
+  -webkit-appearance: none;
+  height: 5px;
+  border-radius: 5px;  
+  background: #d3d3d3;
+  outline: none;
+  opacity: 0.7;
+  -webkit-transition: .2s;
+  transition: opacity .2s;
+}
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%; 
+  background: #4CAF50;
+  cursor: pointer;
+}
+.slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #4CAF50;
+  cursor: pointer;
+}*/

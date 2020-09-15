@@ -1,0 +1,529 @@
+<html>
+
+<head>
+
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.8.2/css/all.css">
+  <!-- Google Fonts -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap">
+  <!-- Bootstrap core CSS -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.4.1/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Material Design Bootstrap -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/mdbootstrap/4.16.0/css/mdb.min.css" rel="stylesheet">
+  <!-- JQuery -->
+  <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+  <!-- Bootstrap tooltips -->
+  <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.4/umd/popper.min.js"></script>
+  <!-- Bootstrap core JavaScript -->
+  <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.4.1/js/bootstrap.min.js"></script>
+  <!-- MDB core JavaScript -->
+  <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mdbootstrap/4.16.0/js/mdb.min.js"></script>
+
+
+  <!-- <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous"> -->
+  <!-- <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.2.0/css/all.css" integrity="sha384-hWVjflwFxL6sNzntih27bfxkr27PmbbK/iSvJ+a4+0owXq79v+lsFkW54bOGbiDQ" crossorigin="anonymous"> -->
+
+  <link rel="stylesheet" href="./style.css">
+  <script src="https://d3js.org/d3.v5.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/numeric/1.2.6/numeric.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/6.6.4/math.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.7.2/dist/tf.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.9.1/underscore-min.js"></script>
+  <script>
+  d3.selection.prototype.moveToFront = function() {
+    return this.each(function(){
+    this.parentNode.appendChild(this);
+    });
+  };
+  </script>
+</head>
+
+<body>
+
+<div class='container'>
+  <div class='row'>
+    <div class='col-8'>
+      <svg id='graph' width=500 height=500></svg>
+    </div>
+  </div>
+</div>
+
+<script>
+function randomNumber(min, max) {
+    min = Math.ceil(min);
+    max = Math.floor(max);
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function compute_gradient(obj, x, h)
+{
+    let grad = [];
+    for(var i=0;i<x.length;i++)
+    {
+        x[i] = x[i]+h/2;
+        let diff = obj(x);
+        x[i] = x[i]-h;
+        diff = diff - obj(x);
+        x[i] = x[i]+h/2;
+        grad.push(diff/h);
+    }
+    return grad;
+}
+
+function circle(x)
+{
+    return [Math.sqrt(9-x[0]*x[0])];
+}
+
+function grad_desc(obj, x, lr, n_iters)
+{
+    //console.log("input x", x);
+    for(var i=0;i<n_iters;i++)
+    {
+        let grad = compute_gradient(obj, x, lr);
+        //console.log("grad", grad);
+        for(var j=0;j<x.length;j++)
+        {
+            //x[j] = x[j]+lr*grad[j];
+            x[j] = x[j] - lr*grad[j];
+        }
+        //console.log("x", x);
+    }
+    return x;
+}
+
+//grad_desc(circle, [2], .1, 20);
+
+function updateAxes(svg, sx, sy){
+  let ax = d3.axisBottom(sx)
+  .tickSizeInner(-(sy.range()[0]- sy.range()[1]));
+  let ay = d3.axisLeft(sy)
+  .tickSizeInner(-(sx.range()[1]- sx.range()[0]));
+  let gx = svg.selectAll('.xAxis')
+  .data([0,])
+  .enter()
+  .append('g')
+  .attr('class', 'xAxis');
+  gx = svg.selectAll('.xAxis')
+  .attr('transform', `translate(${0},${sy.range()[0]})`)
+  .call(ax);
+  let gy = svg.selectAll('.yAxis')
+  .data([0,])
+  .enter()
+  .append('g')
+  .attr('class', 'yAxis');
+  gy = svg.selectAll('.yAxis')
+  .attr('transform', `translate(${sx.range()[0]},${0})`)
+  .call(ay);
+}
+
+function drawGraph(svg, graph){
+  if(svg.sx == undefined){
+    svg.sx = d3.scaleLinear();
+    svg.sy = d3.scaleLinear();
+  }
+
+  function updateScales(){
+    let width = svg.node().clientWidth;
+    let height = svg.node().clientHeight;
+
+    let xExtent = d3.extent(graph.nodes, d=>d.x);
+    let yExtent = d3.extent(graph.nodes, d=>d.y);
+   
+    // if (svg.xDomain !== undefined){
+    //   svg.xDomain[0] = Math.min(xExtent[0], svg.xDomain[0]);
+    //   svg.xDomain[1] = Math.max(xExtent[1], svg.xDomain[1]);
+    //   svg.yDomain[0] = Math.min(yExtent[0], svg.yDomain[0]);
+    //   svg.yDomain[1] = Math.max(yExtent[1], svg.yDomain[1]);
+    // }else{
+      svg.xDomain = xExtent;
+      svg.yDomain = yExtent;
+    // }
+   
+    xExtent = svg.xDomain.slice(0);
+    yExtent = svg.yDomain.slice(0);
+    let xSize = xExtent[1] - xExtent[0];
+    let ySize = yExtent[1] - yExtent[0];
+
+    let xViewport = [30, width-20];
+    let yViewport = [height-20,20];
+    let drawWidth = xViewport[1] - xViewport[0];
+    let drawHeight = yViewport[0] - yViewport[1];
+
+    if (drawWidth/drawHeight > xSize/ySize){
+      let adjust = (ySize / drawHeight * drawWidth) - xSize;
+      xExtent[0] -= adjust/2;
+      xExtent[1] += adjust/2;
+    }else{
+      let adjust = (xSize / drawWidth * drawHeight) - ySize;
+      yExtent[0] -= adjust/2;
+      yExtent[1] += adjust/2;
+    }
+   
+    svg.sx.domain(xExtent)
+    .range(xViewport);
+    svg.sy.domain(yExtent)
+    .range(yViewport);
+  }
+
+  function draw(){
+    svg.selectAll('.edge')
+    .data(window.graph.edges)
+    .exit()
+    .remove();
+    let edges = svg.selectAll('.edge')
+    .data(window.graph.edges)
+    .enter()
+    .append('line')
+    .attr('class', 'edge')
+    .attr('fill', 'none')
+    .attr('stroke', '#333')
+    .attr('stroke-width', 2)
+    .attr('opacity', 0.8);
+    edges = svg.selectAll('.edge')
+    .attr('x1', d=>svg.sx(d.source.x))
+    .attr('x2', d=>svg.sx(d.target.x))
+    .attr('y1', d=>svg.sy(d.source.y))
+    .attr('y2', d=>svg.sy(d.target.y));
+
+    svg.selectAll('.node')
+    .data(window.graph.nodes)
+    .exit()
+    .remove();
+    let newNodes = svg.selectAll('.node')
+    .data(window.graph.nodes)
+    .enter()
+    .append('g')
+    .attr('class', 'node')
+    .call(
+      d3.drag()
+      .on('drag', (d)=>{
+        console.log(d3.event);
+        let x = d3.event.sourceEvent.offsetX;
+        let y = d3.event.sourceEvent.offsetY;
+        let dx = d3.event.dx;
+        let dy = d3.event.dy;
+        d.x = svg.sx.invert(x);
+        d.y = svg.sy.invert(y);
+        let newPos = window.graph.nodes.map(d=>[d.x, d.y]);
+        dataObj.x.assign(tf.tensor2d(newPos));
+        draw();
+      })
+
+    );
+
+    let newCircles = newNodes
+    .append('circle')
+    .attr('r', 12)
+    .attr('fill', d3.schemeCategory10[0]);
+
+    let newTexts = newNodes
+    .append('text')
+    .style('font-size', 12)
+    .style('fill', '#eee')
+    .style('text-anchor', 'middle')
+    .style('alignment-baseline', 'middle');
+
+    let nodes = svg.selectAll('.node')
+    .attr('transform', d=>`translate(${svg.sx(d.x)},${svg.sy(d.y)})`)
+    .moveToFront();
+    let texts = nodes.selectAll('text')
+    .text(d=>d.id);
+    let circles = nodes.selectAll('.circles');
+  }
+
+  window.addEventListener('resize', ()=>{
+    updateScales();
+    updateAxes(svg, svg.sx, svg.sy);
+    draw();
+  });
+
+  updateScales();
+  updateAxes(svg, svg.sx, svg.sy);
+  draw();
+}//drawGraph end
+
+function preprocess(graph, initPos){
+  graph.nodes.forEach((d,i)=>{
+    d.x = initPos[i][0];
+    d.y = initPos[i][1];
+  });
+
+  graph.edges.forEach((d,i)=>{
+    d.source = graph.nodes.filter(e=>e.id==d.source)[0];
+    d.target = graph.nodes.filter(e=>e.id==d.target)[0];
+  });
+}
+
+function random_positions(n)
+{
+  pos = [];
+  for(var i=0;i<n;i++)
+  {
+    pos.push([randomNumber(0,10), randomNumber(0,10)]);
+  }
+  return pos;
+}
+
+function pairwise_distance(x){
+  return tf.tidy(()=>{
+    let xNormSquared = x.norm('euclidean', 1, true).pow(2);
+    let pairwiseDotProduct = x.matMul(x.transpose());
+    let pdistSqaured = pairwiseDotProduct.mul(-2)
+    .add(xNormSquared)
+    .add(xNormSquared.transpose());
+    let pdist = pdistSqaured.clipByValue(0.000001, Infinity).sqrt(); //TODO sqrt not differentiable at 0
+    return pdist;
+  });
+}
+
+function uniformity_edge_length(arr)
+{
+  let arr_2d = convert_2d(arr);
+  let x = tf.variable(tf.tensor2d(arr_2d));
+  let sum_edge_length = 0.0;
+  let pdist = pairwise_distance(x);
+  let avg_len = pdist.sum().div(2);
+  let diff = pdist.sub(avg_len);
+  let diff2 = diff.mul(diff);
+  let diff_sum = diff2.sum();
+  let ue = diff_sum.div(x.shape[0]).div(avg_len).div(avg_len).sqrt();
+  //return ue.dataSync()[0];
+  return 10000*ue.dataSync()[0];
+}
+
+function scale_graph(pos, alpha)
+{
+  let arr = [];
+  for(var i=0;i<pos.length;i++)
+  {
+    arr.push([pos[i][0]*alpha, pos[i][1]*alpha]);
+  }
+  return arr;
+}
+
+function normalize_edge_length(arr_2d)
+{
+  let min = null;
+  for (let e1 of window.graph.edges){
+    let i = e1.source.index;
+    let j = e1.target.index;
+    let dis = Math.sqrt((arr_2d[i][0]-arr_2d[j][0])*(arr_2d[i][0]-arr_2d[j][0]) + (arr_2d[i][1]-arr_2d[j][1])*(arr_2d[i][1]-arr_2d[j][1]));
+    if(min==null)
+    {
+      min = dis;
+    }
+    else
+    {
+      if(min>dis)min=dis;
+    }
+  }
+  let alpha = 1/min;
+  let new_arr = scale_graph(arr_2d, alpha)
+  return new_arr;
+}
+
+function boundingBox(positions)
+{
+  let min_x = null;
+  let min_y = null;
+  let max_x = null;
+  let max_y = null;
+  for(var i=0;i<positions.length;i++)
+  {
+    if(min_x==null)min_x = positions[i][0];
+    else if(min_x>positions[i][0])min_x = positions[i][0];
+    if(min_y==null)min_y = positions[i][1];
+    else if(min_y>positions[i][1])min_y = positions[i][1];
+    if(max_x==null)max_x = positions[i][0];
+    else if(max_x<positions[i][0])max_x = positions[i][0];
+    if(max_y==null)max_y = positions[i][1];
+    else if(max_y<positions[i][1])max_y = positions[i][1];
+  }
+  let arr = [max_x-min_x, max_y-min_y]
+  return arr;
+}
+
+function computearea(pos)
+{
+  pos = normalize_edge_length(pos);
+  let res = boundingBox(pos)
+  return res[0]*res[1];
+}
+
+function areaerror(arr, referenceArea=10){
+    let pos = convert_2d(arr);
+    let area = computearea(pos);
+    return Math.abs(referenceArea-area);
+}
+
+function stress_loss(pred, target, weight){
+  return tf.tidy(()=>{
+    return pred.sub(target).square().mul(weight).mean();
+  });
+}
+
+function stress_obj(arr)
+{
+    let arr_2d = convert_2d(arr);
+    let graphDistance = tf.tensor2d(window.graph.graphDistance);
+    let x = tf.variable(tf.tensor2d(arr_2d));
+    let pdist = pairwise_distance(x);
+    let stressWeight = tf.tensor2d(window.graph.weight);
+    let st = stress_loss(pdist, graphDistance, stressWeight);
+    //st.print();
+    //console.log("returning:", st.toFloat());
+    //console.log("Crossings:", edgeCrossings(arr_2d, window.graph).length);
+    //return st.dataSync()[0];
+    return st.dataSync()[0] + 1000*edgeCrossings(arr_2d, window.graph).length/2;
+    //return 10*st.dataSync()[0] + edgeCrossings(arr_2d, window.graph).length/2;
+}
+
+function convert_1d(positions)
+{
+    let arr = [];
+    for(var i=0;i<positions.length;i++)
+    { 
+      arr.push(positions[i][0]);
+      arr.push(positions[i][1]);
+    }
+    return arr;
+}
+
+function convert_2d(positions)
+{
+    let arr = [];
+    for(var i=0;i<positions.length;i++)
+    {
+      if(i%2==0)
+      {
+        arr.push([positions[i], positions[i+1]]);
+      }
+    }
+    return arr;
+}
+
+function sign(p, line){
+  let s = (p.x-line[0].x)*(line[1].y-line[0].y) + (p.y-line[0].y)*(line[0].x-line[1].x);
+  if(s>0){
+    return 1;
+  }else if(s==0){
+    return 0;
+  }else{
+    return -1;
+  }
+}
+
+
+function isSameSide(p1, p2, line){
+  let s1 = sign(p1, line);
+  let s2 = sign(p2, line);
+  return s1 * s2;
+}
+
+
+function hasCrossing(nodes, includeEndpoints=false){
+  let [n1,n2,n3,n4] = nodes;
+  let ss1 = isSameSide(n1, n2, [n3, n4]);
+  let ss2 = isSameSide(n3, n4, [n1, n2]);
+  if (includeEndpoints){
+    return ss1<=0 && ss2 <= 0;
+  }else{
+    return ss1<0 && ss2 < 0;
+  }
+}
+
+
+function dot(x, y){
+  let dim = 1;
+  let keepDims=true;
+  return tf.tidy(()=>{
+    return x.mul(y).sum(dim, keepDims);
+  });
+}
+
+function cosSimilarity(x, y){
+  let dim = 1;
+  let keepDims = true;
+  return tf.tidy(()=>{
+    let xNorm = x.norm('euclidean', dim, keepDims);
+    let yNorm = y.norm('euclidean', dim, keepDims);
+    let cos = dot(x,y).div(xNorm.mul(yNorm));
+    return cos
+  });
+}
+
+function edgeCrossings(x, graph, sampleSize=1){
+  let crossings = [];
+
+  for (let e1 of graph.edges){
+    for (let e2 of graph.edges){
+      let i = e1.source.index;
+      let j = e1.target.index;
+      let k = e2.source.index;
+      let l = e2.target.index;
+      let nodes = [graph.nodes[i], graph.nodes[j], graph.nodes[k], graph.nodes[l]];
+      let crossed = hasCrossing(nodes);
+      if (crossed){
+        crossings.push([[i,j],[k,l]]);
+      }
+    }
+  }
+  return crossings;
+}
+
+let fn = `data/k-5.json`;
+d3.json(fn).then((graph)=>{
+    let svg_graph = d3.select('#graph');
+    //console.log(graph);
+    window.graph = graph;
+    let n_nodes = 5;
+    positions = random_positions(n_nodes);
+    preprocess(graph, positions);
+    drawGraph(svg_graph, graph);
+    /*let graphDistance = tf.tensor2d(graph.graphDistance);
+    graph.initPositions = positions;
+    let x = tf.variable(tf.tensor2d(graph.initPositions));
+    let pdist = pairwise_distance(x);
+    let stressWeight = tf.tensor2d(graph.weight);
+    let st = stress_loss(pdist, graphDistance, stressWeight);
+    st.print();*/
+    /*let arr = convert_1d(positions);
+    console.log("stress:", stress_obj(arr));
+    arr = grad_desc(stress_obj, arr, .1, 100);
+    console.log("stress:", stress_obj(arr));
+    positions = convert_2d(arr);
+    console.log("positions", positions);
+    preprocess(graph, positions);
+    drawGraph(svg_graph, graph);*/
+
+    function trainOne(iter){
+      let arr = convert_1d(positions);
+      //console.log("stress:", stress_obj(arr));
+      //arr = grad_desc(stress_obj, arr, 0.2, 1);
+      //arr = grad_desc(uniformity_edge_length, arr, 0.4, 1);
+      arr = grad_desc(areaerror, arr, 0.4, 1);
+      //console.log("stress:", stress_obj(arr));
+      positions = convert_2d(arr);
+      //console.log("positions", positions);
+     
+      // preprocess(graph, positions);// we only call this once at the very beginning so this should be deleted and
+      // we should update the position of nodes directly via graph.nodes[i].x and graph.nodes[i].y, like below:
+      for(let i=0; i<positions.length; i++){
+        graph.nodes[i].x = positions[i][0];
+        graph.nodes[i].y = positions[i][1];
+      }
+      drawGraph(svg_graph, graph); 
+
+      if(iter > 0){
+        requestAnimationFrame(()=>{trainOne(iter-1)});
+      }
+    }
+    requestAnimationFrame(()=>{trainOne(100)});
+
+});
+</script>
+</body>
+</html>
+
+

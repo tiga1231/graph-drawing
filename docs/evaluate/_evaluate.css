@@ -1,0 +1,50 @@
+path.domain{
+  display: none;
+}
+
+table, td, th {  
+  border: 1px solid #ddd;
+  text-align: left;
+}
+
+th{
+  top: 0;
+  position: sticky;
+  background: #eee;
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+th, td {
+  padding: 3px;
+}
+
+body{
+  margin: 10px;
+}
+
+g.xAxis, g.yAxis{
+  stroke-width: 0.5;
+  display: none;
+}
+
+table{
+  margin-bottom: 20px;
+}
+
+
+ 
+
+/*.container{
+  display: grid;
+  grid-template-columns: 2fr 1fr repeat(7, 1fr);
+  grid-template-rows: repeat(10, 1fr);
+  width: 100%;
+  min-height: 500px;
+}
+
+
+*/
