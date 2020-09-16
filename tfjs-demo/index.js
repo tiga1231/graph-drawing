@@ -1,7 +1,7 @@
 // main
 let isPlaying = true;
-let dataRoot = './data/contest-prep-1';
-// let dataRoot = './data/contest-1';
+// let dataRoot = './data/contest-prep-1';
+let dataRoot = './data/contest-1';
 // let dataRoot = './data';
 
 window.onload = function(){
@@ -184,28 +184,28 @@ window.onload = function(){
 
     function play(){
       train(dataObj, niter, optimizers, (record)=>{
-        // metrics.push(record.metrics);
-        // losses.push(record.loss);
-        // if (losses.length>maxPlotIter){
-        //   losses = losses.slice(losses.length-maxPlotIter);
-        // }
-        // if (metrics.length > maxMetricSize){
-        //   metrics = metrics.slice(metrics.length-maxMetricSize);
-        // }
-        // traceLoss(svg_loss, losses, maxPlotIter);
-        // traceMetrics(svg_metrics, metrics, maxMetricSize);
-        // if (losses.length >= 10){
-        //   let n = losses.length;
-        //   let firstSlice = losses.slice(Math.floor(n/2), Math.floor(n/4*3));
-        //   let secondSlice = losses.slice(Math.floor(n/4*3), n);
-        //   let avgLoss0 = math.mean(firstSlice);
-        //   let avgLoss1 = math.mean(secondSlice);
-        //   if(avgLoss1 > avgLoss0){
-        //     lrSlider.on('input')(Math.max(lr*0.999, 0.001));
-        //   }
-        // }
+        metrics.push(record.metrics);
+        losses.push(record.loss);
+        if (losses.length>maxPlotIter){
+          losses = losses.slice(losses.length-maxPlotIter);
+        }
+        if (metrics.length > maxMetricSize){
+          metrics = metrics.slice(metrics.length-maxMetricSize);
+        }
+        traceLoss(svg_loss, losses, maxPlotIter);
+        traceMetrics(svg_metrics, metrics, maxMetricSize);
+        if (losses.length >= 10){
+          let n = losses.length;
+          let firstSlice = losses.slice(Math.floor(n/2), Math.floor(n/4*3));
+          let secondSlice = losses.slice(Math.floor(n/4*3), n);
+          let avgLoss0 = math.mean(firstSlice);
+          let avgLoss1 = math.mean(secondSlice);
+          if(avgLoss1 > avgLoss0){
+            lrSlider.on('input')(Math.max(lr*0.999, 0.001));
+          }
+        }
         niter -= 1;
-        if(niter % 3 == 0){
+        if(niter % 2 == 0){//update graph display every 2 iterations
           dataObj.x_arr = x.arraySync();
           let x_arr = postprocess(dataObj.x_arr, graph);
           updateNodePosition(graph, x_arr);

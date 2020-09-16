@@ -958,12 +958,11 @@ function trainOneIter(dataObj, optimizer, computeMetric=true){
 
       let vmin = [0, 0];
       let vmax = [dataObj.graph.width, dataObj.graph.height];
-
       // let l = center_loss(x, graph.center)
       // .add(boundary_loss(x, vmin, vmax));
       // let l = boundary_loss(x, vmin, vmax);
+      
       let l = tf.scalar(0);
-
       if(coef.stress > 0){
         let [st, m_st, pdist_normalized] = stress_loss(pdist, graphDistance, stressWeight);
         metrics.stress = m_st;
@@ -976,8 +975,8 @@ function trainOneIter(dataObj, optimizer, computeMetric=true){
         metrics.crossing_angle = m_an;
         l = l.add(an.mul(coef.crossing_angle));
       }else{
-        // let m_an = crossing_angle_metric(x, graph);
-        // metrics.crossing_angle = m_an;
+        let m_an = crossing_angle_metric(x, graph);
+        metrics.crossing_angle = m_an;
       }
       
       if (coef.neighbor > 0){
@@ -988,12 +987,12 @@ function trainOneIter(dataObj, optimizer, computeMetric=true){
           l = l.add(nb.mul(coef.neighbor));
         }
       }else if (computeMetric){
-        // let [thresh, scale, margin] = computeThreshScaleMargin(pdist.arraySync(), n_neighbors);
-        // let truth = adj;
-        // let mask = tf.scalar(1.0).sub(tf.eye(pdist.shape[0]));
-        // let pred = pdist.sub(thresh).mul(-1).mul(mask);
-        // let m_nb = jaccardIndex(pred.arraySync(), truth.arraySync());
-        // metrics.neighbor = m_nb;
+        let [thresh, scale, margin] = computeThreshScaleMargin(pdist.arraySync(), n_neighbors);
+        let truth = adj;
+        let mask = tf.scalar(1.0).sub(tf.eye(pdist.shape[0]));
+        let pred = pdist.sub(thresh).mul(-1).mul(mask);
+        let m_nb = jaccardIndex(pred.arraySync(), truth.arraySync());
+        metrics.neighbor = m_nb;
       }
 
       
@@ -1005,8 +1004,8 @@ function trainOneIter(dataObj, optimizer, computeMetric=true){
 
       
       if (coef.crossing_number > 0){
-        // let m_cs = crossing_number_metric(x, graph);
-        // metrics.crossing_number = m_cs;
+        let m_cs = crossing_number_metric(x, graph);
+        metrics.crossing_number = m_cs;
         let cs = crossing_number_loss(x, dataObj.edgePairs);
         l = l.add(cs.mul(coef.crossing_number));
       }
@@ -1068,7 +1067,7 @@ function train(dataObj, remainingIter, optimizers, callback){
     console.log('Max iteration reached, please double click the play button to restart');
     window.playButton.on('click')(false);
   }else{
-    let computeMetric = false;//remainingIter % 50 == 0;
+    let computeMetric = true;//remainingIter % 50 == 0;
     let {loss, metrics} = trainOneIter(dataObj, optimizers[0], computeMetric);
     if (callback){
       callback({
