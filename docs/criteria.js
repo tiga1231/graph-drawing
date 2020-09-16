@@ -1072,7 +1072,7 @@ function train(dataObj, remainingIter, optimizers, callback){
     if (callback){
       callback({
         remainingIter,
-        loss: 0,//loss.dataSync()[0],
+        loss: loss.dataSync()[0],
         metrics
       });
     }

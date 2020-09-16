@@ -390,8 +390,8 @@ function drawGraph(graph, svg){
 
 function updateSvgSize(svg_loss, svg_graph){
   // let width =  window.innerWidth;
-  let height_graph =  window.innerHeight/6*5-20;
-  let height_loss =  window.innerHeight/6*1-20;
+  let height_graph =  window.innerHeight/4*3-20;
+  let height_loss =  window.innerHeight/4*1-20;
   svg_loss
   .attr('width', '100%')
   .attr('height', height_loss);
