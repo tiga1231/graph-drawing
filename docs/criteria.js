@@ -10,10 +10,16 @@ function preprocess(graph, initPos){
   }
   graph.center = [graph.width/2||0, graph.height/2||0];
 
+  graph.nodes.forEach((d,i)=>{
+    if(!d.hasOwnProperty('index')){
+      d.index = i;
+    }
+  });
+  
   if (initPos !== undefined){
     graph.nodes.forEach((d,i)=>{
-      d.x = initPos[i][0];
-      d.y = initPos[i][1];
+      d.x = initPos[d.index][0];
+      d.y = initPos[d.index][1];
     });
   }
 
