@@ -7,15 +7,27 @@ import numpy as np
 
 import random
 
-def getSamples(G, n, includeNeighbors=True):
-    seedNodes = random.sample(G.nodes, n)
-    samples = set(seedNodes)
-    if includeNeighbors:
-        for i in seedNodes:
-            neighbors = set(G.neighbors(i))
-            samples.update(neighbors)
-    samples = list(samples)
-    return samples
+# def getSamples(G, n, includeNeighbors=True):
+#     seedNodes = random.sample(G.nodes, n)
+#     samples = set(seedNodes)
+#     if includeNeighbors:
+#         for i in seedNodes:
+#             neighbors = set(G.neighbors(i))
+#             samples.update(neighbors)
+#     samples = list(samples)
+#     return samples
+
+
+# def stress_update_ij(X, D, W, i, j, base_lr=1):
+#     with torch.no_grad():
+#         diff = X[i] - X[j]
+#         norm = diff.norm()
+#         r = (norm-D[i,j]) / 2 / (norm+0.001) * diff
+#         final_lr = min(0.99, base_lr * W[i,j])
+#         grad_xi = r
+#         grad_xj = -r
+#         X[i].data -= final_lr * grad_xi
+#         X[j].data -= final_lr * grad_xj
 
 
 def edge_uniformity(pos, G, k2i, n_samples=None):
@@ -36,7 +48,6 @@ def edge_uniformity(pos, G, k2i, n_samples=None):
 
 def stress(pos, D, W, n_samples=None):
     n,m = pos.shape[0], pos.shape[1]
-    
     if n_samples is not None:
         i0 = np.random.choice(n, n_samples)
         i1 = np.random.choice(n, n_samples)
@@ -49,7 +60,6 @@ def stress(pos, D, W, n_samples=None):
         x1 = X.repeat(n, 1)
         D = D.view(-1)
         W = W.view(-1)
-
     pdist = nn.PairwiseDistance()(x0, x1)
     diff = pdist-D
 #     wbound = (1/4 * diff.abs().min()).item()
@@ -58,13 +68,3 @@ def stress(pos, D, W, n_samples=None):
     return (W*(diff)**2).sum()
 
 
-def stress_update_ij(X, D, W, i, j, base_lr=1):
-    with torch.no_grad():
-        diff = X[i] - X[j]
-        norm = diff.norm()
-        r = (norm-D[i,j]) / 2 / (norm+0.001) * diff
-        final_lr = min(0.99, base_lr * W[i,j])
-        grad_xi = r
-        grad_xj = -r
-        X[i].data -= final_lr * grad_xi
-        X[j].data -= final_lr * grad_xj
