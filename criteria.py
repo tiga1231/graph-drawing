@@ -11,6 +11,116 @@ import networkx as nx
 import random
 
 
+def gabriel(pos, G, k2i, sampleSize):
+    edges = utils.sample_edges(G, sampleSize)
+    nodes = utils.sample_nodes(G, sampleSize)
+    m,n = len(nodes), len(edges)
+    
+    edges = np.array([(k2i[e0], k2i[e1]) for e0,e1 in edges])
+    nodes = np.array([k2i[n] for n in nodes])
+    node_pos = pos[nodes]
+    edge_pos = pos[edges.flatten()].reshape([-1,2,2])
+    centers = edge_pos.mean(1)
+    radii = (edge_pos[:,0,:] - edge_pos[:,1,:]).norm(dim=1, keepdim=True)/2
+    
+    centers = centers.repeat(1,m).view(-1, 2)
+    radii = radii.repeat(1,m).view(-1, 1)
+    node_pos = node_pos.repeat(n,1)
+    
+    relu = nn.ReLU()
+#     print((node_pos-centers).norm(dim=1))
+    loss = relu(radii - (node_pos-centers).norm(dim=1)).pow(2)
+    loss = loss.sum()
+    return loss
+
+
+def crossing_angle_maximization(pos, G, k2i, i2k, sampleSize, sampleOn='edges'):
+    edge_list = list(G.edges)
+    if sampleOn == 'edges':
+        sample_indices = np.random.choice(len(edge_list), sampleSize, replace=False)
+        edge_samples = [edge_list[i] for i in sample_indices]
+        crossing_segs_sample = utils.find_crossings(pos, edge_samples, k2i)
+        
+    elif sampleOn == 'crossings':
+        crossing_segs = utils.find_crossings(pos, edge_list, k2i)
+        crossing_count = crossing_segs.shape[0]
+        sample_indices = np.random.choice(crossing_count, min(sampleSize,crossing_count), replace=False)
+        crossing_segs_sample = crossing_segs[sample_indices]
+
+    if len(crossing_segs_sample) > 0:
+        pos_segs = pos[crossing_segs_sample.flatten()].view(-1,4,2) #torch.stack([torch.stack([pos[i],pos[j],pos[k],pos[l]]) for i,j,k,l in crossing_segs_sample])
+        v1 = pos_segs[:,1] - pos_segs[:,0]
+        v2 = pos_segs[:,3] - pos_segs[:,2]
+        cosSim = torch.nn.CosineSimilarity()
+        return (cosSim(v1, v2)**2).sum()
+    else:
+        return (pos[0,0]*0).sum()##dummy loss
+    
+    
+def aspect_ratio(pos, sampleSize, 
+                 angles=torch.arange(7,dtype=torch.float)/7*np.pi*2, 
+                 target_width_to_height=[1,1], 
+                 scale=0.1):
+    
+    if sampleSize is not None:
+        n = pos.shape[0]
+        i = np.random.choice(n, min(n,sampleSize), replace=False)
+        samples = pos[i,:]
+    else:
+        samples = pos
+        
+    mean = samples.mean(dim=0, keepdim=True)
+#     print(mean)
+    samples -= mean
+    
+    cos = torch.cos(angles)
+    sin = torch.sin(angles)
+    rot = torch.stack([cos, sin, -sin, cos], 1).view(len(angles), 2, 2)
+    
+    samples = samples.matmul(rot)
+
+    softmax = nn.Softmax(dim=1)
+    max_hat = (softmax(samples*scale) * samples).sum(1)
+    min_hat = (softmax(-samples*scale) * samples).sum(1)
+    
+    w = max_hat[:,0] - min_hat[:,0]
+    h = max_hat[:,1] - min_hat[:,1]
+    estimate = torch.stack([w,h], 1)
+    estimate /= estimate.sum(1, keepdim=True)
+#     print(estimate)
+    target = torch.tensor(target_width_to_height, dtype=torch.float)
+    target /= target.sum()
+    target = target.repeat(len(angles), 1)
+    bce = nn.BCELoss(reduction='mean')
+    return bce(estimate, target)
+
+
+
+def vertex_resolution(pos, sampleSize=None, target=0.1):
+    pairwiseDistance = nn.PairwiseDistance()
+    relu = nn.ReLU()
+    softmax = nn.Softmax(dim=0)
+    softmin = nn.Softmin(dim=0)
+    
+    n = pos.shape[0]
+    if sampleSize is not None:
+        i = np.random.choice(n, min(n,sampleSize), replace=False)
+        samples = pos[i,:]
+    else:
+        samples = pos
+    m = samples.shape[0]
+    a = samples.repeat([1,m]).view(-1,2)
+    b = samples.repeat([m,1])
+    pdist = pairwiseDistance(a, b)
+#     dmax = (softmax(pdist)*pdist).sum().detach()
+    dmax = pdist.max().detach()
+    targetDist = target*dmax
+    
+#     loss = len(pdist)*(softmin(pdist).detach() * relu((targetDist - pdist)/targetDist)).sum()
+#     loss = relu((targetDist - pdist)/targetDist).sum()
+    loss = relu(1 - pdist/targetDist).sum()
+    return loss
+
 
 def neighborhood_preseration(pos, G, adj, k2i, i2k, 
                              n_roots=2, depth_limit=2, 
@@ -76,11 +186,11 @@ def neighborhood_preseration(pos, G, adj, k2i, i2k,
 
 
 
-def edge_uniformity(pos, G, k2i, n_samples=None):
+def edge_uniformity(pos, G, k2i, sampleSize=None):
     n,m = pos.shape[0], pos.shape[1]
 
-    if n_samples is not None:
-        edges = random.sample(G.edges, n_samples)
+    if sampleSize is not None:
+        edges = random.sample(G.edges, sampleSize)
     else:
         edges = G.edges
 
@@ -94,11 +204,11 @@ def edge_uniformity(pos, G, k2i, n_samples=None):
 
 
 
-def stress(pos, D, W, n_samples=None):
+def stress(pos, D, W, sampleSize=None):
     n,m = pos.shape[0], pos.shape[1]
-    if n_samples is not None:
-        i0 = np.random.choice(n, n_samples)
-        i1 = np.random.choice(n, n_samples)
+    if sampleSize is not None:
+        i0 = np.random.choice(n, sampleSize)
+        i1 = np.random.choice(n, sampleSize)
         x0 = pos[i0,:]
         x1 = pos[i1,:]
         D = torch.tensor([D[i,j] for i, j in zip(i0, i1)])

@@ -36,18 +36,22 @@ def draw_graph_3d(ax, x, G, grad=None, alpha=0.1):
     return ax
 
 
-def plot(G, pos, lossHistory, lrHistory, i, totalTime, grad=None, show=False, save=True, ):
+def plot(G, pos, lossHistory, lrHistory, i, totalTime, grad=None, edge=True, show=False, save=True, saveName='output.png', title=None):
     
     fig = plt.figure(figsize=[12,5])
 
     ## graph
-#     if x.shape[1] == 2:
-    plt.subplot(121)
-    nx.draw_networkx(G, 
+    ax = plt.subplot(121)
+    if edge:
+        nx.draw_networkx_edges(G, pos=pos, ax=ax)
+    nx.draw_networkx_nodes(G, 
         pos=pos, 
-        node_size=3,
-        font_color='none'
+        node_size=1,
+        font_color='none',
+        ax=ax
     )
+    ax.tick_params(left=True, bottom=True, labelleft=True, labelbottom=True)
+
     if grad is not None:
         plt.quiver(x[:,0], x[:,1], 
                    -grad[:,0], -grad[:,1], 
@@ -58,9 +62,11 @@ def plot(G, pos, lossHistory, lrHistory, i, totalTime, grad=None, show=False, sa
 #         ax = fig.add_subplot(1,2,1, projection='3d')
 #         ax = draw_graph_3d(ax, x, G, grad, alpha=0.01)
     
-    
-    plt.title(f'epoch: {i}, time: {totalTime:.2f}s'.format(i))
-
+    if title is None:
+        plt.title(f'Iter: {i}, time: {totalTime:.2f}s'.format(i))
+    else:
+        plt.title(title)
+        
     ## loss
     plt.subplot(122)
     plt.plot(lossHistory)
@@ -74,7 +80,7 @@ def plot(G, pos, lossHistory, lrHistory, i, totalTime, grad=None, show=False, sa
 #     plt.ylabel('LR')
 
     if save:
-        plt.savefig(f'fig/epoch{i}.png')
+        plt.savefig(saveName)
     
     if show:
         plt.show()

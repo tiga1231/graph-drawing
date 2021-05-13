@@ -1,7 +1,85 @@
 import torch
 import numpy as np
+import time
+import poly_point_isect as bo   ##bentley-ottmann sweep line
 
 
+
+def tick(t0, msg=''):
+    t1 = time.time()
+    print(f'{msg}: {t1-t0}')
+    return t1
+
+def sample_edges(G, sampleSize):
+    edge_list = list(G.edges)
+    sample_indices = np.random.choice(len(edge_list), min(sampleSize,len(edge_list)), replace=False)
+    edge_samples = [edge_list[i] for i in sample_indices]
+    return edge_samples
+
+def sample_nodes(G, sampleSize):
+    node_list = list(G.nodes)
+    sample_indices = np.random.choice(len(node_list), min(sampleSize,len(node_list)), replace=False)
+    node_samples = [node_list[i] for i in sample_indices]
+    return node_samples
+
+def sample_crossings(pos, G, k2i, sampleSize, sampleOn):
+    edge_list = list(G.edges)
+    if sampleOn == 'edges':
+        sample_indices = np.random.choice(len(edge_list), min(sampleSize,len(edge_list)), replace=False)
+        edge_samples = [edge_list[i] for i in sample_indices]
+        crossing_segs_sample = find_crossings(pos, edge_samples, k2i)
+        
+    elif sampleOn == 'crossings':
+        crossing_segs = find_crossings(pos, edge_list, k2i)
+        crossing_count = crossing_segs.shape[0]
+        sample_indices = np.random.choice(crossing_count, min(sampleSize,crossing_count), replace=False)
+        crossing_segs_sample = crossing_segs[sample_indices]
+    return crossing_segs_sample
+    
+    
+
+def find_crossings(pos, G_edges, k2i):
+    
+    ##TODO improve runtime
+    t0 = time.time()
+    x = pos.detach().cpu().numpy().tolist()
+#     t0 = tick(t0, 'a')
+    x = [(
+            tuple([*x[k2i[e0]], k2i[e0]]), ## (x, y, source id)
+            tuple([*x[k2i[e1]], k2i[e1]])  ## (x, y, target id) 
+        )
+        for e0,e1 in G_edges
+    ]
+#     t0 = tick(t0, 'b')
+ 
+    ## option 1
+    point_segs_pairs = bo.isect_segments_include_segments(x)
+    crossing_segs = np.array([psp[1] for psp in point_segs_pairs])
+#     t0 = tick(t0, 'c')
+    if len(crossing_segs) > 0:
+        crossing_segs = crossing_segs[:,:,:,2].reshape([crossing_segs.shape[0], -1])
+        crossing_segs = crossing_segs.astype(np.int)## indices of 4 nodes in edge crossing pairs
+        return crossing_segs
+    else:
+        return np.zeros([0,4])
+
+#     ## option 2 (faster)
+#     crossing_segs = []
+#     intersections = intersection(x)
+#     if intersections is not None:
+#         for l in list(intersections.values()):
+#             a,b,c,d = l[0][0][2], l[0][1][2], l[1][0][2], l[1][1][2]
+#             if a!=c and a!=d and b!=c and b!=d:
+#                 crossing_segs.append([a,b,c,d])
+#         crossing_segs = np.array(crossing_segs)
+#         return crossing_segs
+#     #     t0 = tick(t0, 'c')
+#     else:
+#         return np.zeros([0,4])
+
+    
+    
+    
 #https://discuss.pytorch.org/t/efficient-distance-matrix-computation/9065/3
 def pairwise_distance_squared(x, y=None, w=None):
     '''
