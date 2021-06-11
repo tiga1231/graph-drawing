@@ -54,7 +54,8 @@ def find_crossings(pos, G_edges, k2i):
  
     ## option 1
     point_segs_pairs = bo.isect_segments_include_segments(x)
-    crossing_segs = np.array([psp[1] for psp in point_segs_pairs])
+    crossing_segs = np.array([psp[1][:2] for psp in point_segs_pairs])##select first [:2] edges whenever more than 2 edges crossed at the same intersection 
+    
 #     t0 = tick(t0, 'c')
     if len(crossing_segs) > 0:
         crossing_segs = crossing_segs[:,:,:,2].reshape([crossing_segs.shape[0], -1])

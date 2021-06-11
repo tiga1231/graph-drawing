@@ -36,7 +36,7 @@ def draw_graph_3d(ax, x, G, grad=None, alpha=0.1):
     return ax
 
 
-def plot(G, pos, lossHistory, lrHistory, i, totalTime, grad=None, edge=True, show=False, save=True, saveName='output.png', title=None):
+def plot(G, pos, lossHistory, lrHistory, i, totalTime, grad=None, node_size=1, edge=True, show=False, save=True, saveName='output.png', title=None):
     
     fig = plt.figure(figsize=[12,5])
 
@@ -46,7 +46,7 @@ def plot(G, pos, lossHistory, lrHistory, i, totalTime, grad=None, edge=True, sho
         nx.draw_networkx_edges(G, pos=pos, ax=ax)
     nx.draw_networkx_nodes(G, 
         pos=pos, 
-        node_size=1,
+        node_size=node_size,
         font_color='none',
         ax=ax
     )

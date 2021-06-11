@@ -5,10 +5,74 @@ import lovasz_losses as L
 import utils
 import torch
 from torch import nn
+from torch import optim
 import numpy as np
 import networkx as nx
 
 import random
+
+
+
+def crossings(pos, G, k2i, sampleSize, sampleOn='edges', reg_coef=1, niter=30):
+    crossing_segs_sample = utils.sample_crossings(pos, G, k2i, sampleSize, sampleOn)
+#     if len(crossing_segs_sample) < sampleSize*0.1:
+#         crossing_segs_sample = utils.sample_crossings(pos, G, k2i, sampleSize, sampleOn='crossings')
+        
+    if len(crossing_segs_sample) > 0:
+        pos_segs = pos[crossing_segs_sample.flatten()].view(-1,4,2)
+        w = (torch.rand(pos_segs.shape[0], 2, 1)-0.5).requires_grad_(True)
+        b = (torch.rand(pos_segs.shape[0], 1, 1)-0.5).requires_grad_(True)
+        relu = nn.ReLU()
+        o = optim.SGD([w,b], lr=0.01, momentum=0.5, nesterov=True)
+        for _ in range(niter):
+            pred = pos_segs.detach() @ w + b
+            ## assume labels of nodes in the first edges are -1
+            ## now flip the pred of those nodes so that now we want every pred to be +1
+            pred[:,:2,:] = -pred[:,:2,:]
+            
+            loss_svm = relu(1-pred).sum() + reg_coef * w.pow(2).sum()
+            o.zero_grad()
+            loss_svm.backward()
+            o.step()
+        pred = pos_segs @ w.detach() + b.detach()
+    
+        pred[:,:2,:] = -pred[:,:2,:] 
+        loss_crossing = relu(1-pred).sum()
+        return loss_crossing
+    else:
+        ##return dummy loss
+        return (pos[0,0]*0).sum()
+    
+    
+def get_angles(rays):
+    x,y = rays[:,0], rays[:,1]
+    thetas = torch.angle(x+y*1j)
+    thetas_sorted = torch.sort(thetas).values
+    angles = thetas_sorted.roll(-1) - thetas_sorted
+    angles[-1] *= -1
+#     angles[angles>np.pi] = 2*np.pi - angles[angles>np.pi]
+    return angles
+
+
+def angular_resolution(pos, G, k2i, sampleSize=2):
+    samples = utils.sample_nodes(G, sampleSize)
+    neighbors = [list(G.neighbors(s)) for s in samples]
+    sampleIndices = [k2i[s] for s in samples]
+    neighborIndices = [[k2i[n] for n in nei] for nei in neighbors]
+    
+    samples = pos[sampleIndices]
+    neighbors = [pos[nei] for nei in neighborIndices]
+    
+    rays = [nei-sam for nei,sam in zip(neighbors, samples) if len(nei)>1]
+    angles = [get_angles(rs) for rs in rays]
+    if len(angles) > 0:
+        loss = sum([torch.exp(-a*len(a)).sum() for a in angles])
+#         loss = sum([(a - np.pi*20/len(a)).pow(2).sum() for a in angles])
+    else:
+        loss = pos[0,0]*0##dummy output
+    return loss
+
+
 
 
 def gabriel(pos, G, k2i, sampleSize):
