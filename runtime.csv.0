@@ -1,0 +1,13 @@
+balanced_tree_2_3, stress, 15, 8.433562278747559
+balanced_tree_2_4, stress, 31, 13.093785762786865
+balanced_tree_2_5, stress, 63, 24.770690441131592
+balanced_tree_2_5, stress, 63, 24.770690441131592
+balanced_tree_2_3, stress, 15, 10.309264898300171
+balanced_tree_2_4, stress, 31, 14.333841562271118
+balanced_tree_2_5, stress, 63, 23.764806270599365
+balanced_tree_2_6, stress, 127, 37.9875054359436
+balanced_tree_2_7, stress, 255, 51.25038027763367
+balanced_tree_2_8, stress, 511, 67.28479218482971
+balanced_tree_2_9, stress, 1023, 64.47844672203064
+balanced_tree_2_10, stress, 2047, 110.97077751159668
+balanced_tree_2_10, stress, 2047, 75821, 169.46849822998047

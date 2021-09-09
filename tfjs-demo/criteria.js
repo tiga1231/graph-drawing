@@ -76,20 +76,20 @@ function pairwise_distance(x){
 function stress_loss(pdist, graphDistance, weight){
   return tf.tidy(()=>{
     let n = pdist.shape[0];
-    // let mask = tf.scalar(1.0).sub(tf.eye(n));
-    // let numerator = graphDistance.mul(weight).mul(pdist).mul(mask).sum();
-    // let denominator = graphDistance.pow(2).mul(weight).mul(mask).sum();
-    // let optimalScaling = numerator.div( denominator );
+    let mask = tf.scalar(1.0).sub(tf.eye(n));
+    let numerator = graphDistance.mul(weight).mul(pdist).mul(mask).sum();
+    let denominator = graphDistance.pow(2).mul(weight).mul(mask).sum();
+    let optimalScaling = numerator.div( denominator );
 
     let stress = pdist.sub(graphDistance).square().mul(weight).sum().div(2);
     let loss = stress.div(2);
 
     //metric
-    // let pdist_normalized = pdist.div(optimalScaling);
-    // let metric = pdist_normalized.sub(graphDistance).square().mul(weight).sum().div(2);
-    // metric = metric.dataSync()[0];
-    return [loss, loss.dataSync()[0], 0];
-    // return [loss, metric, pdist_normalized.arraySync()];
+    let pdist_normalized = pdist.div(optimalScaling);
+    let metric = pdist_normalized.sub(graphDistance).square().mul(weight).sum().div(2);
+    metric = metric.dataSync()[0];
+    // return [loss, loss.dataSync()[0], pdist];
+    return [loss, metric, pdist_normalized.arraySync()];
   });
 }
 
@@ -964,16 +964,20 @@ function trainOneIter(dataObj, optimizer, computeMetric=true){
 
       let vmin = [0, 0];
       let vmax = [dataObj.graph.width, dataObj.graph.height];
-      // let l = center_loss(x, graph.center)
+      let l = center_loss(x, graph.center);
       // .add(boundary_loss(x, vmin, vmax));
       // let l = boundary_loss(x, vmin, vmax);
-      
-      let l = tf.scalar(0);
+      // let l = tf.scalar(0);
+
       if(coef.stress > 0){
         let [st, m_st, pdist_normalized] = stress_loss(pdist, graphDistance, stressWeight);
         metrics.stress = m_st;
         metrics.pdist = pdist_normalized;
         l = l.add(st.mul(coef.stress));
+      }else if(computeMetric){
+        let [st, m_st, pdist_normalized] = stress_loss(pdist, graphDistance, stressWeight);
+        metrics.stress = m_st;
+        metrics.pdist = pdist_normalized;
       }
 
       if(coef.crossing_angle > 0){

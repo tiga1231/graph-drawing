@@ -28,6 +28,21 @@ balanced_tree_2_9, neighborhood_preseration, 1023, 43821, 481.19662976264954
 balanced_tree_2_10, neighborhood_preseration, 2047, 79171, 895.1597518920898
 balanced_tree_2_11, neighborhood_preseration, 4095, 134665, 1827.9274952411652
 
+# balanced_tree_2_3, crossings, 15, 15140, 25.038688898086548
+# balanced_tree_2_4, crossings, 31, 18025, 267.17238759994507
+# balanced_tree_2_5, crossings, 63, 11918, 655.6045014858246
+# balanced_tree_2_6, crossings, 127, 14005, 3282.4536077976227
+# balanced_tree_2_7, crossings, 256, 19199, 18349.78613580679
+balanced_tree_2_3, crossings, 15, 12663, 20.9334077835083
+balanced_tree_2_4, crossings, 31, 14180, 133.2729423046112
+balanced_tree_2_5, crossings, 63, 13241, 109.40117883682251
+balanced_tree_2_6, crossings, 127, 12397, 141.17596673965454
+balanced_tree_2_7, crossings, 255, 13916, 118.81520557403564
+balanced_tree_2_8, crossings, 511, 13199, 132.4732756614685
+balanced_tree_2_9, crossings, 1023, 40233, 373.75822591781616
+balanced_tree_2_10, crossings, 2047, 85914, 1048.232301235199
+balanced_tree_2_11, crossings, 4095, 185033, 3075.212067604065
+
 balanced_tree_2_3, crossing_angle_maximization, 15, 2626, 15.488405704498291
 balanced_tree_2_4, crossing_angle_maximization, 31, 4803, 21.460772275924683
 balanced_tree_2_5, crossing_angle_maximization, 63, 2626, 13.717289924621582
@@ -87,6 +102,3 @@ balanced_tree_2_9, gabriel, 1023, 87392, 254.97863173484802
 balanced_tree_2_10, gabriel, 2047, 159191, 706.5335378646851
 balanced_tree_2_11, gabriel, 4095, 295235, 2229.168884754181
 
-# balanced_tree_2_3, crossings, 15, 15140, 25.038688898086548
-# balanced_tree_2_4, crossings, 31, 18025, 267.17238759994507
-# balanced_tree_2_5, crossings, 63, 11918, 655.6045014858246
