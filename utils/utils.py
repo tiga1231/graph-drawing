@@ -1,7 +1,7 @@
 import torch
 import numpy as np
 import time
-import poly_point_isect as bo   ##bentley-ottmann sweep line
+import utils.poly_point_isect as bo   ##bentley-ottmann sweep line
 
 
 

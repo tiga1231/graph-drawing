@@ -1,8 +1,7 @@
 from pynndescent import NNDescent
-import lovasz_losses as L
+from utils import lovasz_losses as L
+from utils import utils
 
-
-import utils
 import torch
 from torch import nn
 from torch import optim

@@ -1,6 +1,7 @@
-fig
+figures
 .ipynb_checkpoints/
 facebook
 __pycache__
-notebook
-talk/
+0_old/notebook
+0_old/talk/
+0_old/reviews
