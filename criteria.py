@@ -43,14 +43,7 @@ def crossings(pos, G, k2i, sampleSize, sampleOn='edges', reg_coef=1, niter=30):
         return (pos[0,0]*0).sum()
     
     
-def get_angles(rays):
-    x,y = rays[:,0], rays[:,1]
-    thetas = torch.angle(x+y*1j)
-    thetas_sorted = torch.sort(thetas).values
-    angles = thetas_sorted.roll(-1) - thetas_sorted
-    angles[-1] *= -1
-#     angles[angles>np.pi] = 2*np.pi - angles[angles>np.pi]
-    return angles
+
 
 
 def angular_resolution(pos, G, k2i, sampleSize=2):
@@ -63,7 +56,7 @@ def angular_resolution(pos, G, k2i, sampleSize=2):
     neighbors = [pos[nei] for nei in neighborIndices]
     
     rays = [nei-sam for nei,sam in zip(neighbors, samples) if len(nei)>1]
-    angles = [get_angles(rs) for rs in rays]
+    angles = [utils.get_angles(rs) for rs in rays]
     if len(angles) > 0:
         loss = sum([torch.exp(-a*len(a)).sum() for a in angles])
 #         loss = sum([(a - np.pi*20/len(a)).pow(2).sum() for a in angles])
@@ -121,7 +114,7 @@ def crossing_angle_maximization(pos, G, k2i, i2k, sampleSize, sampleOn='edges'):
     
     
 def aspect_ratio(pos, sampleSize, 
-                 angles=torch.arange(7,dtype=torch.float)/7*np.pi*2, 
+                 angles=torch.arange(7,dtype=torch.float)/7*(np.pi/2), 
                  target_width_to_height=[1,1], 
                  scale=0.1):
     
@@ -267,20 +260,26 @@ def edge_uniformity(pos, G, k2i, sampleSize=None):
 
 
 
-def stress(pos, D, W, sampleSize=None):
-    n,m = pos.shape[0], pos.shape[1]
-    if sampleSize is not None:
-        i0 = np.random.choice(n, sampleSize)
-        i1 = np.random.choice(n, sampleSize)
-        x0 = pos[i0,:]
-        x1 = pos[i1,:]
-        D = torch.tensor([D[i,j] for i, j in zip(i0, i1)])
-        W = torch.tensor([W[i,j] for i, j in zip(i0, i1)])
+def stress(pos, D, W, samples=None, sampleSize=None):
+    if samples is None:
+        n,m = pos.shape[0], pos.shape[1]
+        if sampleSize is not None:
+            i0 = np.random.choice(n, sampleSize)
+            i1 = np.random.choice(n, sampleSize)
+            x0 = pos[i0,:]
+            x1 = pos[i1,:]
+            D = torch.tensor([D[i,j] for i, j in zip(i0, i1)])
+            W = torch.tensor([W[i,j] for i, j in zip(i0, i1)])
+        else:
+            x0 = pos.repeat(1, n).view(-1,m)
+            x1 = pos.repeat(n, 1)
+            D = D.view(-1)
+            W = W.view(-1)
     else:
-        x0 = X.repeat(1, n).view(-1,m)
-        x1 = X.repeat(n, 1)
-        D = D.view(-1)
-        W = W.view(-1)
+        x0 = pos[samples[:,0],:]
+        x1 = pos[samples[:,1],:]
+        D = torch.tensor([D[i,j] for i, j in samples])
+        W = torch.tensor([W[i,j] for i, j in samples])
     pdist = nn.PairwiseDistance()(x0, x1)
     diff = pdist-D
 #     wbound = (1/4 * diff.abs().min()).item()

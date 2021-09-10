@@ -4,7 +4,16 @@ import time
 import utils.poly_point_isect as bo   ##bentley-ottmann sweep line
 
 
+def get_angles(rays):
+    x,y = rays[:,0], rays[:,1]
+    thetas = torch.angle(x+y*1j)
+    thetas_sorted = torch.sort(thetas).values
+    angles = thetas_sorted.roll(-1) - thetas_sorted
+    angles[-1] *= -1
+#     angles[angles>np.pi] = 2*np.pi - angles[angles>np.pi]
+    return angles
 
+    
 def tick(t0, msg=''):
     t1 = time.time()
     print(f'{msg}: {t1-t0}')
@@ -79,8 +88,19 @@ def find_crossings(pos, G_edges, k2i):
 #         return np.zeros([0,4])
 
     
-    
-    
+def count_crossings(pos, edge_pair_indices):
+
+    x = pos.detach().cpu().numpy().tolist()
+#     t0 = tick(t0, 'a')
+    x = [(
+            tuple([*x[e0]]), ## (x, y)
+            tuple([*x[e1]]) 
+        )
+        for e0,e1 in edge_pair_indices
+    ]
+    return len(bo.isect_segments(x))
+
+
 #https://discuss.pytorch.org/t/efficient-distance-matrix-computation/9065/3
 def pairwise_distance_squared(x, y=None, w=None):
     '''

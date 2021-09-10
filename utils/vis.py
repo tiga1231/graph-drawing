@@ -44,12 +44,12 @@ def plot(G, pos, lossHistory, lrHistory, i, totalTime, grad=None, node_size=1, e
     ax = plt.subplot(121)
     if edge:
         nx.draw_networkx_edges(G, pos=pos, ax=ax)
-    nx.draw_networkx_nodes(G, 
-        pos=pos, 
-        node_size=node_size,
-        font_color='none',
-        ax=ax
-    )
+    # nx.draw_networkx_nodes(G, 
+    #     pos=pos, 
+    #     node_size=node_size,
+    #     font_color='none',
+    #     ax=ax
+    # )
     ax.tick_params(left=True, bottom=True, labelleft=True, labelbottom=True)
 
     if grad is not None:
