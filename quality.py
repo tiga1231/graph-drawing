@@ -134,30 +134,20 @@ def vertex_resolution(pos, sampleSize=None, target=0.1):
 
 def gabriel(pos, G, k2i, sampleSize=None):
 
-    # TODO: fix me
-    return 0
-
     if sampleSize is None:
         nodes = G.nodes
         edges = G.edges
     else:
         edges = utils.sample_edges(G, sampleSize)
         nodes = utils.sample_nodes(G, sampleSize)
-    m,n = len(nodes), len(edges)
     
     edges = np.array([(k2i[e0], k2i[e1]) for e0,e1 in edges])
     nodes = np.array([k2i[n] for n in nodes])
     node_pos = pos[nodes]
     edge_pos = pos[edges.flatten()].reshape([-1,2,2])
     centers = edge_pos.mean(1)
-    radii = (edge_pos[:,0,:] - edge_pos[:,1,:]).norm(dim=1, keepdim=True)/2
+    radii = (edge_pos[:,0,:] - edge_pos[:,1,:]).norm(dim=1)/2
+    node_center_dists = (node_pos.reshape([-1,1,2])-centers.reshape([1,-1,2])).norm(dim=-1)
+    node_center_dists /= radii
     
-    centers = centers.repeat(1,m).view(-1, 2)
-    radii = radii.repeat(1,m).view(-1, 1)
-    node_pos = node_pos.repeat(n,1)
-    
-    relu = nn.ReLU()
-#     print((node_pos-centers).norm(dim=1))
-    loss = relu(radii - (node_pos-centers).norm(dim=1)).pow(2)
-    loss = loss.sum()
-    return loss
+    return node_center_dists.min().item()
