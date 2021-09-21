@@ -36,7 +36,7 @@ def draw_graph_3d(ax, x, G, grad=None, alpha=0.1):
     return ax
 
 
-def plot(G, pos, lossHistory, lrHistory, i, totalTime, grad=None, node_size=1, edge=True, show=False, save=True, saveName='output.png', title=None):
+def plot(G, pos, lossHistory, i, totalTime, grad=None, node_size=1, edge=True, show=False, save=True, saveName='output.png', title=None):
     
     fig = plt.figure(figsize=[12,5])
 
@@ -70,8 +70,9 @@ def plot(G, pos, lossHistory, lrHistory, i, totalTime, grad=None, node_size=1, e
     ## loss
     plt.subplot(122)
     plt.plot(lossHistory)
-    plt.xlabel('Epoch')
+    plt.xlabel('Iteration')
     plt.ylabel('Loss')
+    plt.title(f'Loss: {lossHistory[-1]:.2f}')
     
     ## Lr
 #     plt.subplot(224)

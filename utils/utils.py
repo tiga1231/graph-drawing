@@ -2,6 +2,63 @@ import torch
 import numpy as np
 import time
 import utils.poly_point_isect as bo   ##bentley-ottmann sweep line
+import networkx as nx
+
+from scipy.sparse import csgraph
+from scipy.sparse import csr_matrix
+
+def shortest_path(G):
+    k2i = {k:i for i,k in enumerate(G.nodes)}
+    edge_indices = np.array([(k2i[n0], k2i[n1]) for (n0,n1) in G.edges])
+    row_indices = edge_indices[:,0]
+    col_indices = edge_indices[:,1]
+    adj_data = np.ones(len(edge_indices))
+    adj_sparse = csr_matrix((
+        adj_data, 
+        (row_indices, col_indices)
+    ), shape=(len(G), len(G)), dtype=np.float32)
+
+    D = csgraph.shortest_path(adj_sparse, directed=False, unweighted=True)
+    return D, adj_sparse, k2i
+
+
+
+def load_spx_teaser():
+    return load_node_link_txt('./graphs/spx_teaser.txt')
+    
+    
+def load_node_link_txt(fn):
+    
+    def skip_nodes(f,n):
+        for _ in range(n):
+            f.readline()
+
+    G = nx.Graph()
+    with open(fn) as f:
+        n = int(f.readline().strip())
+        skip_nodes(f, n)
+        G.add_nodes_from(range(n))
+        for e in f:
+            e = e.strip().split()
+            e = int(e[0]), int(e[1])
+            G.add_edge(*e)
+    return G
+
+
+def load_mat(fn='graphs/SuiteSparse Matrix Collection/grid1_dual.mat'):
+    
+    ## credit:
+    ## https://github.com/jxz12/s_gd2/blob/master/jupyter/main.ipynb
+
+    # load the data from the SuiteSparse Matrix Collection format
+    # https://www.cise.ufl.edu/research/sparse/matrices/
+
+    mat_data = io.loadmat(fn)
+    adj = mat_data['Problem']['A'][0][0]
+    G = nx.convert_matrix.from_numpy_matrix(adj.toarray())
+    return G
+
+
 
 
 def get_angles(rays):

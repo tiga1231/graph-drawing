@@ -1,0 +1,90 @@
+grid_2d_graph_16_2, stress, 32, 34028, 28.363936185836792
+grid_2d_graph_16_4, stress, 64, 36244, 41.83005404472351
+grid_2d_graph_16_8, stress, 128, 35021, 61.66878151893616
+grid_2d_graph_16_16, stress, 256, 36850, 117.08448243141174
+grid_2d_graph_16_32, stress, 512, 53388, 178.5776937007904
+grid_2d_graph_16_64, stress, 1024, 85675, 264.4386007785797
+grid_2d_graph_16_128, stress, 2048, 155056, 508.26009154319763
+grid_2d_graph_16_256, stress, 4096, 292452, 1041.793535232544
+
+grid_2d_graph_16_2, edge_uniformity, 32, 24996, 14.378890752792358
+grid_2d_graph_16_4, edge_uniformity, 64, 24491, 16.090188026428223
+grid_2d_graph_16_8, edge_uniformity, 128, 24886, 24.728437423706055
+grid_2d_graph_16_16, edge_uniformity, 256, 24934, 30.215616941452026
+grid_2d_graph_16_32, edge_uniformity, 512, 40650, 63.5442955493927
+grid_2d_graph_16_64, edge_uniformity, 1024, 66589, 144.7598910331726
+grid_2d_graph_16_128, edge_uniformity, 2048, 109431, 473.4785826206207
+grid_2d_graph_16_256, edge_uniformity, 4096, 197242, 1500.3119003772736
+
+grid_2d_graph_16_2, neighborhood_preseration, 32, 12335, 144.11688780784607
+grid_2d_graph_16_4, neighborhood_preseration, 64, 13962, 175.27567958831787
+grid_2d_graph_16_8, neighborhood_preseration, 128, 15091, 209.56128096580505
+grid_2d_graph_16_16, neighborhood_preseration, 256, 25959, 385.01216197013855
+grid_2d_graph_16_32, neighborhood_preseration, 512, 40902, 639.4637126922607
+grid_2d_graph_16_64, neighborhood_preseration, 1024, 90030, 1399.6347334384918
+grid_2d_graph_16_128, neighborhood_preseration, 2048, 169709, 2691.1045949459076
+grid_2d_graph_16_256, neighborhood_preseration, 4096, 306180, 5011.4534459114075
+
+# grid_2d_graph_16_2, crossings, 32, 15528, 317.63670587539673
+# grid_2d_graph_16_4, crossings, 64, 13248, 811.3975384235382
+# grid_2d_graph_16_8, crossings, 128, 25062, 6071.589333772659
+# grid_2d_graph_16_16, crossings, 256, 22625, 21478.57113092758
+grid_2d_graph_16_2, crossings, 32, 12878, 124.58443093299866
+grid_2d_graph_16_4, crossings, 64, 13296, 125.82827734947205
+grid_2d_graph_16_8, crossings, 128, 12305, 127.98510932922363
+grid_2d_graph_16_16, crossings, 256, 16274, 159.10672974586487
+grid_2d_graph_16_32, crossings, 512, 27275, 297.79707431793213
+grid_2d_graph_16_64, crossings, 1024, 50214, 624.0943379402161
+grid_2d_graph_16_128, crossings, 2048, 100855, 1550.640703678131
+grid_2d_graph_16_256, crossings, 4096, 220118, 4073.8839530944824
+
+grid_2d_graph_16_2, crossing_angle_maximization, 32, 11754, 48.95392441749573
+grid_2d_graph_16_4, crossing_angle_maximization, 64, 14732, 61.083741188049316
+grid_2d_graph_16_8, crossing_angle_maximization, 128, 23464, 108.70674157142639
+grid_2d_graph_16_16, crossing_angle_maximization, 256, 8634, 46.67115640640259
+grid_2d_graph_16_32, crossing_angle_maximization, 512, 40427, 206.4889612197876
+grid_2d_graph_16_64, crossing_angle_maximization, 1024, 31226, 228.73233103752136
+grid_2d_graph_16_128, crossing_angle_maximization, 2048, 135739, 1280.641057729721
+grid_2d_graph_16_256, crossing_angle_maximization, 4096, 258295, 3906.2418518066406
+
+grid_2d_graph_16_2, aspect_ratio, 32, 8000, 10.630831003189087
+grid_2d_graph_16_4, aspect_ratio, 64, 8453, 11.509322166442871
+grid_2d_graph_16_8, aspect_ratio, 128, 7826, 11.780992269515991
+grid_2d_graph_16_16, aspect_ratio, 256, 7826, 12.826229572296143
+grid_2d_graph_16_32, aspect_ratio, 512, 15812, 27.360668182373047
+grid_2d_graph_16_64, aspect_ratio, 1024, 31226, 60.283974409103394
+grid_2d_graph_16_128, aspect_ratio, 2048, 62426, 147.85190725326538
+grid_2d_graph_16_256, aspect_ratio, 4096, 130895, 422.4024283885956
+
+grid_2d_graph_16_2, angular_resolution, 32, 17826, 105.41359996795654
+grid_2d_graph_16_4, angular_resolution, 64, 19766, 185.29861879348755
+grid_2d_graph_16_8, angular_resolution, 128, 24770, 445.0779550075531
+grid_2d_graph_16_16, angular_resolution, 256, 23996, 855.1399974822998
+grid_2d_graph_16_32, angular_resolution, 512, 38454, 1391.3701963424683
+grid_2d_graph_16_64, angular_resolution, 1024, 74203, 3097.0380520820618
+grid_2d_graph_16_128, angular_resolution, 2048, 126401, 4056.788272857666
+grid_2d_graph_16_256, angular_resolution, 4096, 222648, 7276.262779951096
+
+grid_2d_graph_16_2, vertex_resolution, 32, 13736, 12.046444654464722
+grid_2d_graph_16_4, vertex_resolution, 64, 18260, 28.179651498794556
+grid_2d_graph_16_8, vertex_resolution, 128, 18503, 78.24192833900452
+grid_2d_graph_16_16, vertex_resolution, 256, 21353, 341.3046758174896
+grid_2d_graph_16_32, vertex_resolution, 512, 35419, 445.37820744514465
+grid_2d_graph_16_64, vertex_resolution, 1024, 75894, 953.5693955421448
+grid_2d_graph_16_128, vertex_resolution, 2048, 195549, 2582.5024785995483
+grid_2d_graph_16_256, vertex_resolution, 4096, 370292, 4921.898018121719
+
+grid_2d_graph_16_64, gabriel, 1024, 104246, 345.71086382865906
+grid_2d_graph_16_128, gabriel, 2048, 170241, 943.5755631923676
+
+grid_2d_graph_16_2, gabriel, 32, 84205, 81.10329031944275
+grid_2d_graph_16_4, gabriel, 64, 82191, 85.83077955245972
+grid_2d_graph_16_8, gabriel, 128, 61716, 74.88210701942444
+grid_2d_graph_16_16, gabriel, 256, 55481, 113.22700786590576
+grid_2d_graph_16_32, gabriel, 512, 64445, 162.372807264328
+grid_2d_graph_16_64, gabriel, 1024, 112668, 385.0703411102295
+grid_2d_graph_16_128, gabriel, 2048, 190486, 964.9027273654938
+grid_2d_graph_16_256, gabriel, 4096, 314532, 3229.3447177410126
+
+
+

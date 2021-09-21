@@ -1,0 +1,29 @@
+grid_2d_graph_16_2, crossings, 32, 15528, 317.63670587539673
+grid_2d_graph_16_4, crossings, 64, 13248, 811.3975384235382
+grid_2d_graph_16_8, crossings, 128, 25062, 6071.589333772659
+grid_2d_graph_16_16, crossings, 256, 22625, 21478.57113092758
+
+balanced_tree_2_6, crossings, 127, 14005, 3282.4536077976227
+balanced_tree_2_6, crossings, 256, 19199, 18349.78613580679
+
+
+
+
+balanced_tree_2_3, crossings, 15, 12663, 20.9334077835083
+balanced_tree_2_4, crossings, 31, 14180, 133.2729423046112
+balanced_tree_2_5, crossings, 63, 13241, 109.40117883682251
+balanced_tree_2_6, crossings, 127, 12397, 141.17596673965454
+balanced_tree_2_7, crossings, 255, 13916, 118.81520557403564
+balanced_tree_2_8, crossings, 511, 13199, 132.4732756614685
+balanced_tree_2_9, crossings, 1023, 40233, 373.75822591781616
+balanced_tree_2_10, crossings, 2047, 85914, 1048.232301235199
+balanced_tree_2_11, crossings, 4095, 185033, 3075.212067604065
+
+grid_2d_graph_16_2, crossings, 32, 12878, 124.58443093299866
+grid_2d_graph_16_4, crossings, 64, 13296, 125.82827734947205
+grid_2d_graph_16_8, crossings, 128, 12305, 127.98510932922363
+grid_2d_graph_16_16, crossings, 256, 16274, 159.10672974586487
+grid_2d_graph_16_32, crossings, 512, 27275, 297.79707431793213
+grid_2d_graph_16_64, crossings, 1024, 50214, 624.0943379402161
+grid_2d_graph_16_128, crossings, 2048, 100855, 1550.640703678131
+grid_2d_graph_16_256, crossings, 4096, 220118, 4073.8839530944824

@@ -260,7 +260,7 @@ def edge_uniformity(pos, G, k2i, sampleSize=None):
 
 
 
-def stress(pos, D, W, samples=None, sampleSize=None):
+def stress(pos, D, W, sampleSize=None, samples=None, reduce='sum'):
     if samples is None:
         n,m = pos.shape[0], pos.shape[1]
         if sampleSize is not None:
@@ -281,11 +281,15 @@ def stress(pos, D, W, samples=None, sampleSize=None):
         D = torch.tensor([D[i,j] for i, j in samples])
         W = torch.tensor([W[i,j] for i, j in samples])
     pdist = nn.PairwiseDistance()(x0, x1)
-    diff = pdist-D
 #     wbound = (1/4 * diff.abs().min()).item()
-# #     print(W.max(), wbound)
 #     W.clamp_(0, wbound)
-    return (W*(diff)**2).sum()
+    
+    res = W*(pdist-D)**2
+    
+    if reduce == 'sum':
+        return res.sum()
+    elif reduce == 'mean':
+        return res.mean()
 
 
 

@@ -13,7 +13,7 @@ import random
 import criteria as C
 
 def stress(pos, D, W, sampleSize=None):
-    return C.stress(pos, D, W, sampleSize).item()
+    return C.stress(pos, D, W, sampleSize, reduce='mean').item()
 
 
 def edge_uniformity(pos, G, k2i, sampleSize=None):

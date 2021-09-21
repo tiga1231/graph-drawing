@@ -1,0 +1,104 @@
+balanced_tree_2_3, stress, 15, 15192, 11.389690637588501
+balanced_tree_2_4, stress, 31, 19060, 16.733774662017822
+balanced_tree_2_5, stress, 63, 20338, 24.023746967315674
+balanced_tree_2_6, stress, 127, 18447, 32.147392988204956
+balanced_tree_2_7, stress, 255, 18230, 31.589913845062256
+balanced_tree_2_8, stress, 511, 23192, 42.34120726585388
+balanced_tree_2_9, stress, 1023, 40530, 76.93706059455872
+balanced_tree_2_10, stress, 2047, 75811, 165.45265936851501
+balanced_tree_2_11, stress, 4095, 140086, 366.0210118293762
+
+balanced_tree_2_3, edge_uniformity, 15, 13026, 5.783739328384399
+balanced_tree_2_4, edge_uniformity, 31, 12838, 6.3753745555877686
+balanced_tree_2_5, edge_uniformity, 63, 12633, 7.356690883636475
+balanced_tree_2_6, edge_uniformity, 127, 12931, 8.825968265533447
+balanced_tree_2_7, edge_uniformity, 255, 13798, 10.469051122665405
+balanced_tree_2_8, edge_uniformity, 511, 28357, 29.84553289413452
+balanced_tree_2_9, edge_uniformity, 1023, 52200, 70.65715408325195
+balanced_tree_2_10, edge_uniformity, 2047, 85349, 193.5030164718628
+balanced_tree_2_11, edge_uniformity, 4095, 149622, 663.8208045959473
+
+balanced_tree_2_3, neighborhood_preseration, 15, 6691, 74.69110703468323
+balanced_tree_2_4, neighborhood_preseration, 31, 9980, 95.84130907058716
+balanced_tree_2_5, neighborhood_preseration, 63, 10949, 111.79368185997009
+balanced_tree_2_6, neighborhood_preseration, 127, 12923, 136.31985664367676
+balanced_tree_2_7, neighborhood_preseration, 255, 17460, 188.74862504005432
+balanced_tree_2_8, neighborhood_preseration, 511, 23555, 256.6784014701843
+balanced_tree_2_9, neighborhood_preseration, 1023, 43821, 481.19662976264954
+balanced_tree_2_10, neighborhood_preseration, 2047, 79171, 895.1597518920898
+balanced_tree_2_11, neighborhood_preseration, 4095, 134665, 1827.9274952411652
+
+# balanced_tree_2_3, crossings, 15, 15140, 25.038688898086548
+# balanced_tree_2_4, crossings, 31, 18025, 267.17238759994507
+# balanced_tree_2_5, crossings, 63, 11918, 655.6045014858246
+# balanced_tree_2_6, crossings, 127, 14005, 3282.4536077976227
+# balanced_tree_2_7, crossings, 256, 19199, 18349.78613580679
+balanced_tree_2_3, crossings, 15, 12663, 20.9334077835083
+balanced_tree_2_4, crossings, 31, 14180, 133.2729423046112
+balanced_tree_2_5, crossings, 63, 13241, 109.40117883682251
+balanced_tree_2_6, crossings, 127, 12397, 141.17596673965454
+balanced_tree_2_7, crossings, 255, 13916, 118.81520557403564
+balanced_tree_2_8, crossings, 511, 13199, 132.4732756614685
+balanced_tree_2_9, crossings, 1023, 40233, 373.75822591781616
+balanced_tree_2_10, crossings, 2047, 85914, 1048.232301235199
+balanced_tree_2_11, crossings, 4095, 185033, 3075.212067604065
+
+balanced_tree_2_3, crossing_angle_maximization, 15, 2626, 15.488405704498291
+balanced_tree_2_4, crossing_angle_maximization, 31, 4803, 21.460772275924683
+balanced_tree_2_5, crossing_angle_maximization, 63, 2626, 13.717289924621582
+balanced_tree_2_6, crossing_angle_maximization, 127, 12151, 59.7934410572052
+balanced_tree_2_7, crossing_angle_maximization, 255, 13636, 63.99932360649109
+balanced_tree_2_8, crossing_angle_maximization, 511, 24935, 135.53044509887695
+balanced_tree_2_9, crossing_angle_maximization, 1023, 50596, 289.7674570083618
+balanced_tree_2_10, crossing_angle_maximization, 2047, 97981, 723.8750677108765
+balanced_tree_2_11, crossing_angle_maximization, 4095, 183807, 2144.300337791443
+
+balanced_tree_2_3, aspect_ratio, 15, 5288, 6.71037745475769
+balanced_tree_2_4, aspect_ratio, 31, 5470, 7.002239227294922
+balanced_tree_2_5, aspect_ratio, 63, 2784, 3.8129231929779053
+balanced_tree_2_6, aspect_ratio, 127, 5753, 8.685491800308228
+balanced_tree_2_7, aspect_ratio, 255, 3155, 5.296580076217651
+balanced_tree_2_8, aspect_ratio, 511, 7826, 12.633372783660889
+balanced_tree_2_9, aspect_ratio, 1023, 28517, 46.4644775390625
+balanced_tree_2_10, aspect_ratio, 2047, 60747, 113.6288492679596
+balanced_tree_2_11, aspect_ratio, 4095, 101266, 260.7051830291748
+balanced_tree_2_3, aspect_ratio, 15, 5537, 7.541962146759033
+balanced_tree_2_4, aspect_ratio, 31, 2626, 4.058110952377319
+balanced_tree_2_5, aspect_ratio, 63, 3772, 5.606039047241211
+balanced_tree_2_6, aspect_ratio, 127, 3218, 5.497891426086426
+balanced_tree_2_7, aspect_ratio, 255, 2626, 4.808663845062256
+balanced_tree_2_8, aspect_ratio, 511, 7826, 13.88996934890747
+balanced_tree_2_9, aspect_ratio, 1023, 21552, 36.591140270233154
+balanced_tree_2_10, aspect_ratio, 2047, 60019, 116.93344235420227
+balanced_tree_2_11, aspect_ratio, 4095, 114910, 277.84755754470825
+
+balanced_tree_2_3, angular_resolution, 15, 18584, 38.833096504211426
+balanced_tree_2_4, angular_resolution, 31, 18615, 67.37266135215759
+balanced_tree_2_5, angular_resolution, 63, 19504, 134.66735911369324
+balanced_tree_2_6, angular_resolution, 127, 19662, 265.5492124557495
+balanced_tree_2_7, angular_resolution, 255, 24943, 672.9758563041687
+balanced_tree_2_8, angular_resolution, 511, 28886, 803.3923254013062
+balanced_tree_2_9, angular_resolution, 1023, 57996, 1611.9124209880829
+balanced_tree_2_10, angular_resolution, 2047, 124637, 3695.6531553268433
+balanced_tree_2_11, angular_resolution, 4095, 242364, 6485.079937696457
+
+balanced_tree_2_3, vertex_resolution, 15, 10168, 6.913655042648315
+balanced_tree_2_4, vertex_resolution, 31, 10863, 8.593419075012207
+balanced_tree_2_5, vertex_resolution, 63, 10867, 15.822284698486328
+balanced_tree_2_6, vertex_resolution, 127, 13651, 56.968302726745605
+balanced_tree_2_7, vertex_resolution, 255, 12637, 47.276456117630005
+balanced_tree_2_8, vertex_resolution, 511, 29558, 112.0292558670044
+balanced_tree_2_9, vertex_resolution, 1023, 69882, 276.5507781505585
+balanced_tree_2_10, vertex_resolution, 2047, 120007, 522.5113010406494
+balanced_tree_2_11, vertex_resolution, 4095, 162366, 764.8015167713165
+
+balanced_tree_2_3, gabriel, 15, 18377, 17.787651777267456
+balanced_tree_2_4, gabriel, 31, 21652, 23.452629804611206
+balanced_tree_2_5, gabriel, 63, 29333, 32.8031485080719
+balanced_tree_2_6, gabriel, 127, 33445, 41.221132040023804
+balanced_tree_2_7, gabriel, 255, 44584, 86.74561667442322
+balanced_tree_2_8, gabriel, 511, 47520, 111.30807757377625
+balanced_tree_2_9, gabriel, 1023, 87392, 254.97863173484802
+balanced_tree_2_10, gabriel, 2047, 159191, 706.5335378646851
+balanced_tree_2_11, gabriel, 4095, 295235, 2229.168884754181
+
