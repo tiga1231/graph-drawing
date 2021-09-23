@@ -90,7 +90,7 @@ def optimize(
                     loss += weight * C.edge_uniformity(
                         pos, G, k2i, sample_sizes['edge_uniformity']-1
                     )
-                elif c == 'neighborhood_preseration':
+                elif c == 'neighborhood_preservation':
                     loss += weight * C.neighborhood_preseration(
                         pos, G, adj, k2i, i2k, n_roots=2, depth_limit=2
                     )
