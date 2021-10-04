@@ -179,6 +179,7 @@ def vertex_resolution(pos, sampleSize=None, target=0.1):
 
 
 def neighborhood_preseration(pos, G, adj, k2i, i2k, 
+                             degrees, max_degree,
                              n_roots=2, depth_limit=2, 
                              neg_sample_rate=0.5, 
                              device='cpu'):
@@ -205,10 +206,10 @@ def neighborhood_preseration(pos, G, adj, k2i, i2k,
     x = pos
     
     ## k_dist
-    degrees = adj.sum(1).numpy().astype(np.int64)
-    max_degree = degrees.max().item()
-    n_neighbors = max(2, min(max_degree+1, n))
+    degrees = degrees[samples]
+    max_degree = degrees.max()
 
+    n_neighbors = max(2, min(max_degree+1, n))
     n_trees = min(64, 5 + int(round((n) ** 0.5 / 20.0)))
     n_iters = max(5, int(round(np.log2(n))))
     
@@ -226,6 +227,7 @@ def neighborhood_preseration(pos, G, adj, k2i, i2k,
         ( knn_dists[i,min(kmax, k)] + knn_dists[i,min(kmax, k+1)] ) / 2 
         for i,k in enumerate(degrees)
     ])
+#     k_dist = 0.8
 
     ## pdist
     x0 = x.repeat(1, n).view(-1,m)
@@ -235,6 +237,7 @@ def neighborhood_preseration(pos, G, adj, k2i, i2k,
 
     ## loss 
     pred = torch.from_numpy(k_dist.astype(np.float32)).view(-1,1) - pdist
+#     pred = -pdist + k_dist
     target = adj + torch.eye(adj.shape[0], device=device)
     loss = L.lovasz_hinge(pred, target)
     return loss
