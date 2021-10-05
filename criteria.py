@@ -114,30 +114,31 @@ def crossing_angle_maximization(pos, G, k2i, i2k, sampleSize, sampleOn='edges'):
     
     
 def aspect_ratio(pos, sampleSize, 
-                 angles=torch.arange(7,dtype=torch.float)/7*(np.pi/2), 
-                 target_width_to_height=[1,1], 
-                 scale=0.1):
-    
-    if sampleSize is not None:
+                 rotation_angles=torch.arange(7,dtype=torch.float)/7*(np.pi/2), 
+                 target_width_to_height=[1,1]):
+    if sampleSize is None or sampleSize=='full':
+        samples = pos
+    else:
         n = pos.shape[0]
         i = np.random.choice(n, min(n,sampleSize), replace=False)
         samples = pos[i,:]
-    else:
-        samples = pos
+
         
     mean = samples.mean(dim=0, keepdim=True)
+    scale = samples.std(dim=0).max().detach() * 10 ## todo better scaling to replace the 10
 #     print(mean)
     samples -= mean
+    samples /= scale
     
-    cos = torch.cos(angles)
-    sin = torch.sin(angles)
-    rot = torch.stack([cos, sin, -sin, cos], 1).view(len(angles), 2, 2)
+    cos = torch.cos(rotation_angles)
+    sin = torch.sin(rotation_angles)
+    rot = torch.stack([cos, sin, -sin, cos], 1).view(len(rotation_angles), 2, 2)
     
     samples = samples.matmul(rot)
 
     softmax = nn.Softmax(dim=1)
-    max_hat = (softmax(samples*scale) * samples).sum(1)
-    min_hat = (softmax(-samples*scale) * samples).sum(1)
+    max_hat = (softmax(samples) * samples).sum(1)
+    min_hat = (softmax(-samples) * samples).sum(1)
     
     w = max_hat[:,0] - min_hat[:,0]
     h = max_hat[:,1] - min_hat[:,1]
@@ -146,7 +147,7 @@ def aspect_ratio(pos, sampleSize,
 #     print(estimate)
     target = torch.tensor(target_width_to_height, dtype=torch.float)
     target /= target.sum()
-    target = target.repeat(len(angles), 1)
+    target = target.repeat(len(rotation_angles), 1)
     bce = nn.BCELoss(reduction='mean')
     return bce(estimate, target)
 
@@ -155,15 +156,17 @@ def aspect_ratio(pos, sampleSize,
 def vertex_resolution(pos, sampleSize=None, target=0.1):
     pairwiseDistance = nn.PairwiseDistance()
     relu = nn.ReLU()
-    softmax = nn.Softmax(dim=0)
-    softmin = nn.Softmin(dim=0)
+#     softmax = nn.Softmax(dim=0)
+#     softmin = nn.Softmin(dim=0)
     
     n = pos.shape[0]
-    if sampleSize is not None:
+    
+    if sampleSize is None or sampleSize=='full':
+        samples = pos
+    else:
         i = np.random.choice(n, min(n,sampleSize), replace=False)
         samples = pos[i,:]
-    else:
-        samples = pos
+
     m = samples.shape[0]
     a = samples.repeat([1,m]).view(-1,2)
     b = samples.repeat([m,1])
@@ -180,7 +183,7 @@ def vertex_resolution(pos, sampleSize=None, target=0.1):
 
 def neighborhood_preseration(pos, G, adj, k2i, i2k, 
                              degrees, max_degree,
-                             n_roots=2, depth_limit=2, 
+                             n_roots=2, depth_limit=1, 
                              neg_sample_rate=0.5, 
                              device='cpu'):
     
@@ -205,39 +208,42 @@ def neighborhood_preseration(pos, G, adj, k2i, i2k,
     n,m = pos.shape
     x = pos
     
-    ## k_dist
-    degrees = degrees[samples]
-    max_degree = degrees.max()
-
-    n_neighbors = max(2, min(max_degree+1, n))
-    n_trees = min(64, 5 + int(round((n) ** 0.5 / 20.0)))
-    n_iters = max(5, int(round(np.log2(n))))
-    
-    knn_search_index = NNDescent(
-        x.detach().numpy(),
-        n_neighbors=n_neighbors,
-        n_trees=n_trees,
-        n_iters=n_iters,
-        max_candidates=60,
-    )
-    knn_indices, knn_dists = knn_search_index.neighbor_graph
-    
-    kmax = knn_dists.shape[1]-1
-    k_dist = np.array([
-        ( knn_dists[i,min(kmax, k)] + knn_dists[i,min(kmax, k+1)] ) / 2 
-        for i,k in enumerate(degrees)
-    ])
-#     k_dist = 0.8
-
     ## pdist
     x0 = x.repeat(1, n).view(-1,m)
     x1 = x.repeat(n, 1)
     pdist = nn.PairwiseDistance()(x0, x1).view(n, n)
+    
+    
+    ## k_dist
+#     degrees = degrees[samples]
+#     max_degree = degrees.max()
 
+#     n_neighbors = max(2, min(max_degree+1, n))
+#     n_trees = min(64, 5 + int(round((n) ** 0.5 / 20.0)))
+#     n_iters = max(5, int(round(np.log2(n))))
+#     knn_search_index = NNDescent(
+#         x.detach().numpy(),
+#         n_neighbors=n_neighbors,
+#         n_trees=n_trees,
+#         n_iters=n_iters,
+#         max_candidates=60,
+#     )
+#     knn_indices, knn_dists = knn_search_index.neighbor_graph
+    
+#     kmax = knn_dists.shape[1]-1
+#     k_dist = np.array([
+#         ( knn_dists[i,min(kmax, k)] + knn_dists[i,min(kmax, k+1)] ) / 2 
+#         for i,k in enumerate(degrees)
+#     ])
+    ## TODO adaptive dist (e.g. normalize by diameter of the drawing, 0.1*diameter)
+    diameter = pdist.max().item()
+    k_dist = 0.05 * max(diameter, 1.0)
 
-    ## loss 
-    pred = torch.from_numpy(k_dist.astype(np.float32)).view(-1,1) - pdist
-#     pred = -pdist + k_dist
+    
+#     pred = torch.from_numpy(k_dist.astype(np.float32)).view(-1,1) - pdist
+    pred = -pdist + k_dist
+
+    
     target = adj + torch.eye(adj.shape[0], device=device)
     loss = L.lovasz_hinge(pred, target)
     return loss

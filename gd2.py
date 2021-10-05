@@ -53,7 +53,6 @@ class GD2:
         evaluate_interval=None,
         max_iter=int(1e4),
         grad_clamp=4,
-        vis=False,
         vis_interval=100,
         optimizer_kwargs=None,
         scheduler_kwargs=None,
@@ -61,9 +60,13 @@ class GD2:
         
         ## shortcut of object attributes
         G = self.G
-        D, adj_sparse, k2i = self.D, self.adj_sparse, self.k2i
+        D, k2i = self.D, self.k2i
+        i2k = self.i2k
+        adj = self.adj
         W = self.W
         pos = self.pos
+        degrees = self.degrees
+        maxDegree = self.maxDegree
         
         ## measure runtime
         t0 = time.time()
@@ -95,10 +98,15 @@ class GD2:
         scheduler_kwargs = scheduler_kwargs_default
         scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, **scheduler_kwargs)
 
-        ## start training
         iterBar = tqdm(range(max_iter))
         stopCountdown = 100
 
+        ## smoothed loss curve during training
+        s = 0.5**(1/100) ## smoothing factor for loss curve, setting 'half-life'=100
+        weighted_sum_of_loss = 0
+        sum_of_weight = 0
+
+        ## start training
         for _ in iterBar:
             t0 = time.time()
             ## optimization
@@ -115,7 +123,8 @@ class GD2:
                         self.stress_sample_start = 0
 
                     stress_samples = self.node_index_pairs[
-                        self.stress_sample_start : self.stress_sample_start+sample_sizes['stress']
+                        self.stress_sample_start : 
+                        self.stress_sample_start+sample_sizes['stress']
                     ]
                     self.stress_sample_start+=sample_sizes['stress']
 
@@ -135,7 +144,7 @@ class GD2:
                         k2i, i2k, 
                         degrees, maxDegree,
                         n_roots=sample_sizes['neighborhood_preservation'], 
-                        depth_limit=2)
+                        depth_limit=1)
 
 
                 elif c == 'crossings':
@@ -150,7 +159,7 @@ class GD2:
                     loss += weight * C.crossing_angle_maximization(
                         pos, G, k2i, i2k, 
                         sampleSize=sample_sizes['crossing_angle_maximization'], 
-                        sampleOn='crossings') ## slow for large sample size
+                        sampleOn='crossings') ## SLOW for large sample size
 
 
                 elif c == 'aspect_ratio':
@@ -178,7 +187,6 @@ class GD2:
                 else:
                     print(f'Criteria not supported: {c}')
 
-                
             loss.backward()
             pos.grad.clamp_(-grad_clamp, grad_clamp)
             optimizer.step()
@@ -186,7 +194,8 @@ class GD2:
             
             self.runtime += time.time() - t0
 
-            if vis and self.i%vis_interval==vis_interval-1:
+            if vis_interval is not None and vis_interval>0 \
+            and self.i%vis_interval==vis_interval-1:
                 pos_numpy = pos.detach().cpu().numpy()
                 pos_G = {k:pos_numpy[k2i[k]] for k in G.nodes}
                 V.plot(
@@ -208,10 +217,10 @@ class GD2:
             if self.i % 100 == 99:
                 iterBar.set_postfix({'loss': loss.item(), })    
 
-            if len(self.loss_curve) > 0:
-                self.loss_curve.append(0.999*self.loss_curve[-1] + 0.001*loss.item())
-            else:
-                self.loss_curve.append(loss.item())
+            weighted_sum_of_loss = weighted_sum_of_loss*s + loss.item()
+            sum_of_weight = sum_of_weight*s+1
+            self.loss_curve.append(weighted_sum_of_loss/sum_of_weight)
+                
 
             if scheduler is not None:
                 scheduler.step(self.loss_curve[-1])
@@ -230,7 +239,9 @@ class GD2:
             if lr <= scheduler.min_lrs[0]:
                 break
 
-            if evaluate is not None and evaluate_interval and self.i%evaluate_interval==evaluate_interval-1:
+            if evaluate is not None \
+            and evaluate_interval>0 \
+            and self.i%evaluate_interval==evaluate_interval-1:
                 qualities = self.evaluate(qualities=evaluate)
                 self.qualities_by_time.append(dict(
                     time=self.runtime,
@@ -298,19 +309,26 @@ class GD2:
             elif q == 'edge_uniformity':
                 qualityMeasures[q] = Q.edge_uniformity(pos, self.G, self.k2i)
             elif q == 'neighborhood_preservation':
-                qualityMeasures[q] = Q.neighborhood_preservation(pos, self.G, self.adj, self.i2k)
+                qualityMeasures[q] = Q.neighborhood_preservation(
+                    pos, self.G, self.adj, self.i2k, 
+                    lower=True)
             elif q == 'crossings':
                 qualityMeasures[q] = Q.crossings(pos, self.edge_indices)
             elif q == 'crossing_angle_maximization':
-                qualityMeasures[q] = Q.crossing_angle_maximization(pos, self.G.edges, self.k2i)
+                qualityMeasures[q] = Q.crossing_angle_maximization(
+                    pos, self.G.edges, self.k2i)
             elif q == 'aspect_ratio':
-                qualityMeasures[q] = Q.aspect_ratio(pos)
+                qualityMeasures[q] = Q.aspect_ratio(pos, lower=True)
             elif q == 'angular_resolution':
                 qualityMeasures[q] = Q.angular_resolution(pos, self.G, self.k2i)
             elif q == 'vertex_resolution':
-                qualityMeasures[q] = Q.vertex_resolution(pos, target=1/len(self.G)**0.5)
+                qualityMeasures[q] = Q.vertex_resolution(
+                    pos, target=1/len(self.G)**0.5,
+                    lower=True)
             elif q == 'gabriel':
-                qualityMeasures[q] = Q.gabriel(pos, self.G, self.k2i)
+                qualityMeasures[q] = Q.gabriel(
+                    pos, self.G, self.k2i,
+                    lower=True)
            
             if verbose:
                 print(f'done in {time.time()-t0:.2f}s')
