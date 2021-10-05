@@ -14,8 +14,9 @@ import random
 
 def crossings(pos, G, k2i, sampleSize, sampleOn='edges', reg_coef=1, niter=30):
     crossing_segs_sample = utils.sample_crossings(pos, G, k2i, sampleSize, sampleOn)
-#     if len(crossing_segs_sample) < sampleSize*0.1:
-#         crossing_segs_sample = utils.sample_crossings(pos, G, k2i, sampleSize, sampleOn='crossings')
+#     if len(crossing_segs_sample) < sampleSize*0.5:
+    if sampleOn=='edges' and len(crossing_segs_sample) == 0:
+        crossing_segs_sample = utils.sample_crossings(pos, G, k2i, sampleSize, sampleOn='crossings')
         
     if len(crossing_segs_sample) > 0:
         pos_segs = pos[crossing_segs_sample.flatten()].view(-1,4,2)
@@ -46,24 +47,51 @@ def crossings(pos, G, k2i, sampleSize, sampleOn='edges', reg_coef=1, niter=30):
 
 
 
-def angular_resolution(pos, G, k2i, sampleSize=2):
-    samples = utils.sample_nodes(G, sampleSize)
-    neighbors = [list(G.neighbors(s)) for s in samples]
-    sampleIndices = [k2i[s] for s in samples]
+# def angular_resolution(pos, G, k2i, sampleSize=2):
+#     samples = utils.sample_nodes(G, sampleSize)
+#     neighbors = [list(G.neighbors(s)) for s in samples]
+#     sampleIndices = [k2i[s] for s in samples]
+#     neighborIndices = [[k2i[n] for n in nei] for nei in neighbors]
+    
+#     samples = pos[sampleIndices]
+#     neighbors = [pos[nei] for nei in neighborIndices]
+    
+#     angles = [utils.get_angles(rs) for rs in rays]
+#     if len(angles) > 0:
+#         loss = sum([torch.exp(-a*len(a)).sum() for a in angles])
+# #         loss = sum([(a - np.pi*20/len(a)).pow(2).sum() for a in angles])
+#     else:
+#         loss = pos[0,0]*0##dummy output
+#     return loss
+
+def angular_resolution(pos, G, k2i, sampleSize=2, sample=None):
+    if sample is None:
+        sample = utils.sample_nodes(G, sampleSize)
+    sample = [s for s in sample if len(list(G.neighbors(s)))>=2]
+    relu = nn.ReLU()
+    
+    if len(sample)==0:
+        loss = pos[0,0]*0##dummy output
+        return loss
+    degrees = torch.tensor([G.degree(s) for s in sample])
+    neighbors = [random.choices(list(G.neighbors(s)),k=2) for s in sample]
+    sampleIndices = [k2i[s] for s in sample]
     neighborIndices = [[k2i[n] for n in nei] for nei in neighbors]
+    sample = pos[sampleIndices]
+    neighbors = torch.stack([pos[nei] for nei in neighborIndices])
+    rays = neighbors - sample.unsqueeze(1)
+
+    cosSim = nn.CosineSimilarity()
+    cos = cosSim(rays[:,0,:], rays[:,1,:])
+    angles = torch.acos(cos.clamp_(-0.99,0.99))
     
-    samples = pos[sampleIndices]
-    neighbors = [pos[nei] for nei in neighborIndices]
-    
-    rays = [nei-sam for nei,sam in zip(neighbors, samples) if len(nei)>1]
-    angles = [utils.get_angles(rs) for rs in rays]
-    if len(angles) > 0:
-        loss = sum([torch.exp(-a*len(a)).sum() for a in angles])
-#         loss = sum([(a - np.pi*20/len(a)).pow(2).sum() for a in angles])
+    if cos.shape[0] > 0:
+        loss = ((cos+1)**2 / 4).sum()
+#         loss = torch.exp(-angles).sum()
+#         loss = relu(-angles + 2*np.pi/degrees).pow(2).sum()
     else:
         loss = pos[0,0]*0##dummy output
     return loss
-
 
 
 
@@ -91,20 +119,25 @@ def gabriel(pos, G, k2i, sampleSize):
 
 
 def crossing_angle_maximization(pos, G, k2i, i2k, sampleSize, sampleOn='edges'):
-    edge_list = list(G.edges)
-    if sampleOn == 'edges':
-        sample_indices = np.random.choice(len(edge_list), sampleSize, replace=False)
-        edge_samples = [edge_list[i] for i in sample_indices]
-        crossing_segs_sample = utils.find_crossings(pos, edge_samples, k2i)
+    
+    crossing_segs_sample = utils.sample_crossings(pos, G, k2i, sampleSize, sampleOn)
+    if sampleOn=='edges' and len(crossing_segs_sample) == 0:
+        crossing_segs_sample = utils.sample_crossings(pos, G, k2i, sampleSize, sampleOn='crossings')
         
-    elif sampleOn == 'crossings':
-        crossing_segs = utils.find_crossings(pos, edge_list, k2i)
-        crossing_count = crossing_segs.shape[0]
-        sample_indices = np.random.choice(crossing_count, min(sampleSize,crossing_count), replace=False)
-        crossing_segs_sample = crossing_segs[sample_indices]
+#     edge_list = list(G.edges)
+#     if sampleOn == 'edges':
+#         sample_indices = np.random.choice(len(edge_list), sampleSize, replace=False)
+#         edge_samples = [edge_list[i] for i in sample_indices]
+#         crossing_segs_sample = utils.find_crossings(pos, edge_samples, k2i)
+        
+#     elif sampleOn == 'crossings':
+#         crossing_segs = utils.find_crossings(pos, edge_list, k2i)
+#         crossing_count = crossing_segs.shape[0]
+#         sample_indices = np.random.choice(crossing_count, min(sampleSize,crossing_count), replace=False)
+#         crossing_segs_sample = crossing_segs[sample_indices]
 
     if len(crossing_segs_sample) > 0:
-        pos_segs = pos[crossing_segs_sample.flatten()].view(-1,4,2) #torch.stack([torch.stack([pos[i],pos[j],pos[k],pos[l]]) for i,j,k,l in crossing_segs_sample])
+        pos_segs = pos[crossing_segs_sample.flatten()].view(-1,4,2)
         v1 = pos_segs[:,1] - pos_segs[:,0]
         v2 = pos_segs[:,3] - pos_segs[:,2]
         cosSim = torch.nn.CosineSimilarity()
@@ -215,9 +248,9 @@ def neighborhood_preseration(pos, G, adj, k2i, i2k,
     
     
     ## k_dist
+    ## Option 1, mean of k-th and (k+1)th-NN as threshold
 #     degrees = degrees[samples]
 #     max_degree = degrees.max()
-
 #     n_neighbors = max(2, min(max_degree+1, n))
 #     n_trees = min(64, 5 + int(round((n) ** 0.5 / 20.0)))
 #     n_iters = max(5, int(round(np.log2(n))))
@@ -229,16 +262,22 @@ def neighborhood_preseration(pos, G, adj, k2i, i2k,
 #         max_candidates=60,
 #     )
 #     knn_indices, knn_dists = knn_search_index.neighbor_graph
-    
 #     kmax = knn_dists.shape[1]-1
 #     k_dist = np.array([
 #         ( knn_dists[i,min(kmax, k)] + knn_dists[i,min(kmax, k+1)] ) / 2 
 #         for i,k in enumerate(degrees)
 #     ])
-    ## TODO adaptive dist (e.g. normalize by diameter of the drawing, 0.1*diameter)
-    diameter = pdist.max().item()
-    k_dist = 0.05 * max(diameter, 1.0)
 
+    ## Option 2, fraction of diameter of drawing as threshold
+    ## TODO adaptive dist (e.g. normalize by diameter of the drawing, 0.1*diameter)
+#     diameter = pdist.max().item()
+#     k_dist = 0.1 * max(diameter, 1.0)
+
+    ## Option 3, constant threshold
+    k_dist = 1.5
+    
+    ## Option 4 (TODO), threshold by k and (k+1)-th graph theoretical distance
+    
     
 #     pred = torch.from_numpy(k_dist.astype(np.float32)).view(-1,1) - pdist
     pred = -pdist + k_dist
@@ -251,14 +290,13 @@ def neighborhood_preseration(pos, G, adj, k2i, i2k,
 
 
 
-def edge_uniformity(pos, G, k2i, sampleSize=None):
+def edge_uniformity(pos, G, k2i, sampleSize=None, sample=None):
     n,m = pos.shape[0], pos.shape[1]
-
     if sampleSize is not None:
         edges = random.sample(G.edges, sampleSize)
     else:
         edges = G.edges
-
+        
     sourceIndices, targetIndices = zip(*[ [k2i[e0], k2i[e1]] for e0,e1 in edges])
     source = pos[sourceIndices,:]
     target = pos[targetIndices,:]
@@ -269,8 +307,8 @@ def edge_uniformity(pos, G, k2i, sampleSize=None):
 
 
 
-def stress(pos, D, W, sampleSize=None, samples=None, reduce='sum'):
-    if samples is None:
+def stress(pos, D, W, sampleSize=None, sample=None, reduce='sum'):
+    if sample is None:
         n,m = pos.shape[0], pos.shape[1]
         if sampleSize is not None:
             i0 = np.random.choice(n, sampleSize)
@@ -285,10 +323,10 @@ def stress(pos, D, W, sampleSize=None, samples=None, reduce='sum'):
             D = D.view(-1)
             W = W.view(-1)
     else:
-        x0 = pos[samples[:,0],:]
-        x1 = pos[samples[:,1],:]
-        D = torch.tensor([D[i,j] for i, j in samples])
-        W = torch.tensor([W[i,j] for i, j in samples])
+        x0 = pos[sample[:,0],:]
+        x1 = pos[sample[:,1],:]
+        D = torch.tensor([D[i,j] for i, j in sample])
+        W = torch.tensor([W[i,j] for i, j in sample])
     pdist = nn.PairwiseDistance()(x0, x1)
 #     wbound = (1/4 * diff.abs().min()).item()
 #     W.clamp_(0, wbound)

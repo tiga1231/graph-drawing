@@ -26,7 +26,7 @@ def crossings(pos, edge_indices):
     return utils.count_crossings(pos, edge_indices)
 
 
-def neighborhood_preservation(pos, G, adj, i2k, lower=False):
+def neighborhood_preservation(pos, G, adj, i2k):
     ## todo try sklearn/scipy knn?
     # from sklearn.neighbors import kneighbors_graph
     # kneighbors_graph(pos.detach().numpy(), 5, mode='distance', include_self=False).toarray()
@@ -62,10 +62,7 @@ def neighborhood_preservation(pos, G, adj, i2k, lower=False):
         for j in range(degrees[i]):
             knn[i, knn_indices[i,j+1]] = 1
     jaccard = (np.logical_and(adj,knn).sum() / np.logical_or(adj,knn).sum()).item()
-    if lower:
-        return 1-jaccard
-    else:
-        return jaccard
+    return jaccard
 
 
 
@@ -80,7 +77,7 @@ def crossing_angle_maximization(pos, G_edges, k2i):
         cosSim.clamp_(-1,1)
         angle = torch.acos(cosSim)
         
-        ##quality is the lower the better
+        ##quality: the lower the better
         quality = (angle - np.pi/2).abs().max().item() / (np.pi/2) 
 #         quality = (angle - np.pi/2).abs().mean().item() / (np.pi/2)
     return quality
@@ -90,7 +87,6 @@ def crossing_angle_maximization(pos, G_edges, k2i):
 def aspect_ratio(
     pos, sampleSize=None, 
     rotation_angles=torch.arange(7,dtype=torch.float)/7*(np.pi/2), 
-    lower=False
 ):
     if sampleSize is not None:
         n = pos.shape[0]
@@ -110,10 +106,7 @@ def aspect_ratio(
     wh = samples.max(1).values - samples.min(1).values
     ratios = wh.min(1).values / wh.max(1).values 
     quality = ratios.min().item() ## range=[0,1] thecloser to 1 the better
-    if lower:
-        return 1-quality
-    else:
-        return quality
+    return quality
 
 
 def angular_resolution(pos, G, k2i, sampleSize=None):
@@ -132,12 +125,13 @@ def angular_resolution(pos, G, k2i, sampleSize=None):
     rays = [nei-sam for nei,sam in zip(neighbors, samples) if len(nei)>1]
     angles = [utils.get_angles(rs) for rs in rays]
     min_angle = min(min(a) for a in angles)
+#     min_angle = sum(min(a) for a in angles)/len(angles)
     ar = min_angle / (np.pi*2/max_degree)
     return ar.item()
 
 
 
-def vertex_resolution(pos, sampleSize=None, target=0.1, lower=False):
+def vertex_resolution(pos, sampleSize=None, target=0.1):
     pairwiseDistance = nn.PairwiseDistance()
     n = pos.shape[0]
     if sampleSize is not None:
@@ -152,14 +146,11 @@ def vertex_resolution(pos, sampleSize=None, target=0.1, lower=False):
     dmax = pdist.max().detach()
     pdist[::m+1] = 1e9
     vr = (pdist.min() / (dmax*target)).item()
-    if lower:
-        return 1-vr
-    else:
-        return vr
+    return vr
 
 
 
-def gabriel(pos, G, k2i, sampleSize=None, lower=False):
+def gabriel(pos, G, k2i, sampleSize=None):
 
     if sampleSize is None:
         nodes = G.nodes
@@ -178,10 +169,7 @@ def gabriel(pos, G, k2i, sampleSize=None, lower=False):
     node_center_dists /= radii
     
     quality = node_center_dists.min().item()
-    if lower:
-        return 1-quality
-    else:
-        return quality
+    return quality
         
         
         

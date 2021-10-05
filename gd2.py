@@ -5,12 +5,23 @@ import criteria as C
 import quality as Q
 
 import time
-from tqdm.notebook import tqdm
+
 
 import numpy as np
-
 import torch
 from torch import nn, optim
+from torch.utils.data import DataLoader
+
+
+def is_interactive():
+    import __main__ as main
+    return not hasattr(main, '__file__')
+if is_interactive():
+    from tqdm.notebook import tqdm
+else:
+    from tqdm import tqdm
+
+
 
 ##TODO custom lr_scheduler, linear slowdown on plateau 
 
@@ -44,8 +55,9 @@ class GD2:
         self.i = 0
         self.runtime = 0
         self.loss_curve = []
+        self.sample_sizes = {}
         
-
+        
     def optimize(self,
         criteria_weights={'stress':1.0}, 
         sample_sizes={'stress':128},
@@ -58,6 +70,7 @@ class GD2:
         scheduler_kwargs=None,
     ):
         
+        self.sample_sizes = sample_sizes
         ## shortcut of object attributes
         G = self.G
         D, k2i = self.D, self.k2i
@@ -68,6 +81,8 @@ class GD2:
         degrees = self.degrees
         maxDegree = self.maxDegree
         
+        self.init_sampler(criteria_weights)
+            
         ## measure runtime
         t0 = time.time()
 
@@ -116,26 +131,25 @@ class GD2:
             for c, weight in criteria_weights.items():
                 if weight == 0:
                     continue
-                    
+                
                 if c == 'stress':
-                    if self.stress_sample_start >= len(self.node_index_pairs):
-                        np.random.shuffle(self.node_index_pairs)
-                        self.stress_sample_start = 0
+#                     if self.stress_sample_start >= len(self.node_index_pairs):
+#                         np.random.shuffle(self.node_index_pairs)
+#                         self.stress_sample_start = 0
 
-                    stress_samples = self.node_index_pairs[
-                        self.stress_sample_start : 
-                        self.stress_sample_start+sample_sizes['stress']
-                    ]
-                    self.stress_sample_start+=sample_sizes['stress']
-
+#                     stress_samples = self.node_index_pairs[
+#                         self.stress_sample_start : 
+#                         self.stress_sample_start+sample_sizes['stress']
+#                     ]
+#                     self.stress_sample_start+=sample_sizes['stress']
+                    sample = self.sample(c)
                     loss += weight * C.stress(
                         pos, D, W, 
-                        samples=stress_samples, reduce='mean',)
-
+                        sample=sample, reduce='mean',)
 
                 elif c == 'edge_uniformity':
                     loss += weight * C.edge_uniformity(
-                        pos, G, k2i, sample_sizes['edge_uniformity']-1)
+                        pos, G, k2i, sample_sizes['edge_uniformity'])
 
 
                 elif c == 'neighborhood_preservation':
@@ -151,7 +165,7 @@ class GD2:
                     loss += weight * C.crossings(
                         pos, G, k2i, reg_coef=0.01, 
                         niter=20, 
-                        sampleSize=sample_sizes['crossings'], sampleOn='crossings'
+                        sampleSize=sample_sizes['crossings'], sampleOn='edges'
                     )
 
 
@@ -159,18 +173,23 @@ class GD2:
                     loss += weight * C.crossing_angle_maximization(
                         pos, G, k2i, i2k, 
                         sampleSize=sample_sizes['crossing_angle_maximization'], 
-                        sampleOn='crossings') ## SLOW for large sample size
+#                         sampleOn='crossings') ## SLOW for large sample size
+                        sampleOn='edges')
 
 
                 elif c == 'aspect_ratio':
                     loss += weight * C.aspect_ratio(
-                        pos, sampleSize=sample_sizes['crossing_angle_maximization'])
+                        pos, 
+                        sampleSize=sample_sizes['crossing_angle_maximization'])
 
 
                 elif c == 'angular_resolution':
-#                     loss += weight * C.angular_resolution(pos, G, k2i, sampleSize=sampleSize//maxDegree)
+                    sample = [self.i2k[i.item()] for i in self.sample(c)]
                     loss += weight * C.angular_resolution(
-                        pos, G, k2i, sampleSize=sample_sizes['angular_resolution'])
+                        pos, G, k2i, 
+                        sampleSize=sample_sizes['angular_resolution'],
+                        sample = sample,
+                    )
 
 
                 elif c == 'vertex_resolution':
@@ -239,9 +258,11 @@ class GD2:
             if lr <= scheduler.min_lrs[0]:
                 break
 
-            if evaluate is not None \
-            and evaluate_interval>0 \
-            and self.i%evaluate_interval==evaluate_interval-1:
+            if (evaluate_interval is not None
+                and evaluate_interval>0 
+                and self.i%evaluate_interval == evaluate_interval-1
+                or self.i == max_iter-1):
+                
                 qualities = self.evaluate(qualities=evaluate)
                 self.qualities_by_time.append(dict(
                     time=self.runtime,
@@ -251,7 +272,6 @@ class GD2:
                 
             self.i+=1
             
-                
         
         ## attach pos to G.nodes        
         pos_numpy = pos.detach().numpy()
@@ -259,9 +279,54 @@ class GD2:
             G.nodes[k]['pos'] = pos_numpy[k2i[k],:]
         
         ## prepare result
-        result = self.get_result_dict(evaluate, sample_sizes)
-        return result
-
+        return self.get_result_dict(evaluate, sample_sizes)
+    
+    
+    def init_sampler(self, criteria_weights):
+        self.samplers = {}
+        self.dataloaders = {}
+        for c,w in criteria_weights.items():
+            if w == 0:
+                continue
+            if c == 'stress':
+                self.dataloaders[c] = DataLoader(
+                    self.node_index_pairs, 
+                    batch_size=self.sample_sizes[c],
+                    shuffle=True)
+            elif c == 'edge_uniformity':
+                pass
+#                 self.dataloaders[c] = DataLoader(self.edge_indices, batch_size=self.sample_sizes[c])
+            elif c == 'neighborhood_preservation':
+                pass
+            elif c == 'crossings':
+                pass
+            elif c == 'crossing_angle_maximization':
+                pass
+            elif c == 'aspect_ratio':
+                pass
+            elif c == 'angular_resolution':
+                    ## TODO sampling all PAIRS of incident edges, instead of nodes
+                self.dataloaders[c] = DataLoader(
+                    range(len(self.G.nodes)), 
+                    batch_size=self.sample_sizes[c],
+                    shuffle=True)
+                
+            elif c == 'vertex_resolution':
+                pass
+            elif c == 'gabriel':
+                pass
+    
+    
+    def sample(self, criterion):
+        if criterion not in self.samplers:
+            self.samplers[criterion] = iter(self.dataloaders[criterion])
+        try:
+            sample = next(self.samplers[criterion])
+        except StopIteration:
+            self.samplers[criterion] = iter(self.dataloaders[criterion])
+            sample = next(self.samplers[criterion])
+        return sample
+        
     
     def get_result_dict(self, evaluate, sample_sizes):
         return dict(
@@ -269,8 +334,9 @@ class GD2:
             loss_curve=self.loss_curve,
             runtime=self.runtime,
             qualities_by_time=self.qualities_by_time,
-            qualities=self.evaluate(qualities=evaluate) if evaluate is not None else None,
-            sample_sizes=sample_sizes
+            qualities=self.qualities_by_time[-1]['qualities'],
+            sample_sizes=self.sample_sizes,
+            pos=self.pos,
         )
     
     
@@ -309,26 +375,22 @@ class GD2:
             elif q == 'edge_uniformity':
                 qualityMeasures[q] = Q.edge_uniformity(pos, self.G, self.k2i)
             elif q == 'neighborhood_preservation':
-                qualityMeasures[q] = Q.neighborhood_preservation(
-                    pos, self.G, self.adj, self.i2k, 
-                    lower=True)
+                qualityMeasures[q] = 1 - Q.neighborhood_preservation(
+                    pos, self.G, self.adj, self.i2k)
             elif q == 'crossings':
                 qualityMeasures[q] = Q.crossings(pos, self.edge_indices)
             elif q == 'crossing_angle_maximization':
                 qualityMeasures[q] = Q.crossing_angle_maximization(
                     pos, self.G.edges, self.k2i)
             elif q == 'aspect_ratio':
-                qualityMeasures[q] = Q.aspect_ratio(pos, lower=True)
+                qualityMeasures[q] = 1 - Q.aspect_ratio(pos)
             elif q == 'angular_resolution':
-                qualityMeasures[q] = Q.angular_resolution(pos, self.G, self.k2i)
+                qualityMeasures[q] = 1- Q.angular_resolution(pos, self.G, self.k2i)
             elif q == 'vertex_resolution':
-                qualityMeasures[q] = Q.vertex_resolution(
-                    pos, target=1/len(self.G)**0.5,
-                    lower=True)
+                qualityMeasures[q] = 1 - Q.vertex_resolution(
+                    pos, target=1/len(self.G)**0.5)
             elif q == 'gabriel':
-                qualityMeasures[q] = Q.gabriel(
-                    pos, self.G, self.k2i,
-                    lower=True)
+                qualityMeasures[q] = 1 - Q.gabriel(pos, self.G, self.k2i)
            
             if verbose:
                 print(f'done in {time.time()-t0:.2f}s')

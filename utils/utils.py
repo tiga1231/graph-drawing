@@ -24,7 +24,7 @@ def shortest_path(G):
 
 
 def load_spx_teaser():
-    return load_node_link_txt('./graphs/spx_teaser.txt')
+    return load_node_link_txt('./input_graphs/spx_teaser.txt')
     
     
 def load_node_link_txt(fn):
@@ -45,7 +45,7 @@ def load_node_link_txt(fn):
     return G
 
 
-def load_mat(fn='graphs/SuiteSparse Matrix Collection/grid1_dual.mat'):
+def load_mat(fn='input_graphs/SuiteSparse Matrix Collection/grid1_dual.mat'):
     
     ## credit:
     ## https://github.com/jxz12/s_gd2/blob/master/jupyter/main.ipynb
