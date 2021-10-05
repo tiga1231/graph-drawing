@@ -77,21 +77,21 @@ criteria_weights_default = {
     'crossings':1,
     'crossing_angle_maximization':0.1,
     'aspect_ratio':10,
-    'angular_resolution':0.1,
+    'angular_resolution':0.01,
     'vertex_resolution':1,
     'gabriel': 0.01,
 }
-sample_sizes_default = {
+sample_sizes={
     'stress': 64,
     'edge_uniformity':10,
     'neighborhood_preservation':16,
     'crossings':10,
     'crossing_angle_maximization':10,
     'aspect_ratio': 'full',
-    'angular_resolution':16,
+    'angular_resolution':32,
     'vertex_resolution':int(len(G)**0.5),
     'gabriel':10,
-}
+},
 
 ## use default weights when we choose to optimize certain criteria
 criteria_weights = {}
