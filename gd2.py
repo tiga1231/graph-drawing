@@ -16,10 +16,13 @@ from torch.utils.data import DataLoader
 def is_interactive():
     import __main__ as main
     return not hasattr(main, '__file__')
+
 if is_interactive():
     from tqdm.notebook import tqdm
+    from IPython import display
 else:
     from tqdm import tqdm
+    display = None
 
 
 
@@ -46,6 +49,7 @@ class GD2:
             np.repeat(self.node_indices, len(self.G)),
             np.tile(self.node_indices, len(self.G))
         ]
+        self.node_index_pairs = self.node_index_pairs[self.node_index_pairs[:,0]!=self.node_index_pairs[:,1]]
         self.stress_sample_start = 0
         np.random.shuffle(self.node_index_pairs)
         
@@ -66,8 +70,10 @@ class GD2:
         max_iter=int(1e4),
         grad_clamp=4,
         vis_interval=100,
+        clear_output=False,
         optimizer_kwargs=None,
         scheduler_kwargs=None,
+                 
     ):
         
         self.sample_sizes = sample_sizes
@@ -118,9 +124,9 @@ class GD2:
 
         ## smoothed loss curve during training
         s = 0.5**(1/100) ## smoothing factor for loss curve, setting 'half-life'=100
-        weighted_sum_of_loss = 0
-        sum_of_weight = 0
-
+        weighted_sum_of_loss, sum_of_weight = 0, 0
+        vr_target_dist, vr_target_weight = 1, 0
+            
         ## start training
         for _ in iterBar:
             t0 = time.time()
@@ -188,13 +194,20 @@ class GD2:
                     loss += weight * C.angular_resolution(
                         pos, G, k2i, 
                         sampleSize=sample_sizes['angular_resolution'],
-                        sample = sample,
+                        sample=sample,
                     )
 
 
                 elif c == 'vertex_resolution':
-                    loss += weight * C.vertex_resolution(
-                        pos, sampleSize=sample_sizes['vertex_resolution'], target=1/len(G)**0.5)
+                    sample = self.sample(c)
+                    l, vr_target_dist, vr_target_weight = C.vertex_resolution(
+                        pos, 
+                        sample=sample, 
+                        target=1/len(G)**0.5, 
+                        prev_target_dist=vr_target_dist,
+                        prev_weight=vr_target_weight
+                    )
+                    loss += weight * l
 
 
                 elif c == 'gabriel':
@@ -217,10 +230,13 @@ class GD2:
             and self.i%vis_interval==vis_interval-1:
                 pos_numpy = pos.detach().cpu().numpy()
                 pos_G = {k:pos_numpy[k2i[k]] for k in G.nodes}
+                if display is not None and clear_output:
+                    display.clear_output(wait=True)
                 V.plot(
                     G, pos_G,
                     self.loss_curve, 
                     self.i, self.runtime, 
+                    node_size=0,
                     edge=True, show=True, save=False
                 )
 
@@ -312,7 +328,10 @@ class GD2:
                     shuffle=True)
                 
             elif c == 'vertex_resolution':
-                pass
+                self.dataloaders[c] = DataLoader(
+                    self.node_index_pairs, 
+                    batch_size=self.sample_sizes[c],
+                    shuffle=True)
             elif c == 'gabriel':
                 pass
     
@@ -387,8 +406,7 @@ class GD2:
             elif q == 'angular_resolution':
                 qualityMeasures[q] = 1- Q.angular_resolution(pos, self.G, self.k2i)
             elif q == 'vertex_resolution':
-                qualityMeasures[q] = 1 - Q.vertex_resolution(
-                    pos, target=1/len(self.G)**0.5)
+                qualityMeasures[q] = 1 - Q.vertex_resolution(pos, target=1/len(self.G)**0.5)
             elif q == 'gabriel':
                 qualityMeasures[q] = 1 - Q.gabriel(pos, self.G, self.k2i)
            

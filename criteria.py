@@ -158,10 +158,9 @@ def aspect_ratio(pos, sampleSize,
 
         
     mean = samples.mean(dim=0, keepdim=True)
-    scale = samples.std(dim=0).max().detach() * 10 ## todo better scaling to replace the 10
-#     print(mean)
     samples -= mean
-    samples /= scale
+    scale = samples.max().detach()
+    samples = samples/scale * 1
     
     cos = torch.cos(rotation_angles)
     sin = torch.sin(rotation_angles)
@@ -170,6 +169,7 @@ def aspect_ratio(pos, sampleSize,
     samples = samples.matmul(rot)
 
     softmax = nn.Softmax(dim=1)
+#     print(softmax(samples))
     max_hat = (softmax(samples) * samples).sum(1)
     min_hat = (softmax(-samples) * samples).sum(1)
     
@@ -182,36 +182,51 @@ def aspect_ratio(pos, sampleSize,
     target /= target.sum()
     target = target.repeat(len(rotation_angles), 1)
     bce = nn.BCELoss(reduction='mean')
-    return bce(estimate, target)
+    mse = nn.MSELoss(reduction='mean')
+    return mse(estimate, target)
 
 
 
-def vertex_resolution(pos, sampleSize=None, target=0.1):
+def vertex_resolution(pos, sampleSize=None, sample=None, target=0.1, prev_target_dist=1, prev_weight=1):
     pairwiseDistance = nn.PairwiseDistance()
     relu = nn.ReLU()
 #     softmax = nn.Softmax(dim=0)
 #     softmin = nn.Softmin(dim=0)
     
     n = pos.shape[0]
+    if sample is None:
+        if sampleSize is None or sampleSize=='full':
+            sample = pos
+        else:
+            i = np.random.choice(n, min(n,sampleSize), replace=False)
+            sample = pos[i,:]
+        m = sample.shape[0]
+        a = sample.repeat([1,m]).view(-1,2)
+        b = sample.repeat([m,1])
+        pdist = pairwiseDistance(a, b)
     
-    if sampleSize is None or sampleSize=='full':
-        samples = pos
     else:
-        i = np.random.choice(n, min(n,sampleSize), replace=False)
-        samples = pos[i,:]
-
-    m = samples.shape[0]
-    a = samples.repeat([1,m]).view(-1,2)
-    b = samples.repeat([m,1])
-    pdist = pairwiseDistance(a, b)
+        a = pos[sample[:,0],:]
+        b = pos[sample[:,1],:]
+        pdist = pairwiseDistance(a,b)
+    
 #     dmax = (softmax(pdist)*pdist).sum().detach()
     dmax = pdist.max().detach()
-    targetDist = target*dmax
     
-#     loss = len(pdist)*(softmin(pdist).detach() * relu((targetDist - pdist)/targetDist)).sum()
-#     loss = relu((targetDist - pdist)/targetDist).sum()
-    loss = relu(1 - pdist/targetDist).sum()
-    return loss
+    target_dist = target*dmax
+    ## exponentially smoothed target_dist
+    smoothness = 0.1
+    weight = prev_weight*smoothness + 1
+    target_dist = (
+        max(target_dist, prev_target_dist) 
+        +min(target_dist, prev_target_dist)*smoothness
+    )/weight
+    
+#     loss = len(pdist)*(softmin(pdist).detach() * relu((target_dist - pdist)/target_dist)).sum()
+#     loss = relu((target_dist - pdist)/targetDist).sum()
+#     loss = relu(target_dist - pdist).sum()
+    loss = relu(1 - pdist/target_dist).pow(2).sum()
+    return loss, target_dist, weight
 
 
 def neighborhood_preseration(pos, G, adj, k2i, i2k, 
@@ -301,7 +316,7 @@ def edge_uniformity(pos, G, k2i, sampleSize=None, sample=None):
     source = pos[sourceIndices,:]
     target = pos[targetIndices,:]
     edgeLengths = (source-target).norm(dim=1) 
-    eu = edgeLengths.std()
+    eu = edgeLengths.var()
     return eu
 
 
@@ -315,6 +330,8 @@ def stress(pos, D, W, sampleSize=None, sample=None, reduce='sum'):
             i1 = np.random.choice(n, sampleSize)
             x0 = pos[i0,:]
             x1 = pos[i1,:]
+            
+        
             D = torch.tensor([D[i,j] for i, j in zip(i0, i1)])
             W = torch.tensor([W[i,j] for i, j in zip(i0, i1)])
         else:

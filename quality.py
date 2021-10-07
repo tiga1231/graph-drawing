@@ -143,9 +143,13 @@ def vertex_resolution(pos, sampleSize=None, target=0.1):
     a = samples.repeat([1,m]).view(-1,2)
     b = samples.repeat([m,1])
     pdist = pairwiseDistance(a, b)
-    dmax = pdist.max().detach()
-    pdist[::m+1] = 1e9
-    vr = (pdist.min() / (dmax*target)).item()
+    dmax = pdist.max().item()
+    pdist = pdist[pdist>0.01]
+    dmin = pdist.min().item()
+    
+#     pdist[::m+1] = 1e9
+    vr = dmin / (dmax*target)
+#     vr = (dmin / dmax)
     return vr
 
 
