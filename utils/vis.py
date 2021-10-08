@@ -36,14 +36,8 @@ def draw_graph_3d(ax, x, G, grad=None, alpha=0.1):
     return ax
 
 
-def plot(G, pos, lossHistory, i, totalTime, grad=None, node_size=1, edge=True, show=False, save=True, saveName='output.png', title=None):
-    
-    fig = plt.figure(figsize=[12,5])
-
-    ## graph
-    ax = plt.subplot(121)
-    if edge:
-        nx.draw_networkx_edges(G, pos=pos, ax=ax)
+def draw_graph(G, pos, ax, xlabel=None, ylabel=None, node_size=0):
+    nx.draw_networkx_edges(G, pos=pos, ax=ax)
     if node_size>0:
         nx.draw_networkx_nodes(G, 
             pos=pos, 
@@ -51,6 +45,19 @@ def plot(G, pos, lossHistory, i, totalTime, grad=None, node_size=1, edge=True, s
             font_color='none',
             ax=ax
         )
+    if xlabel:
+        plt.xlabel(xlabel)
+    if ylabel:
+        plt.ylabel(ylabel)
+    
+    
+def plot(G, pos, lossHistory, i, totalTime, grad=None, node_size=1, edge=True, show=False, save=True, saveName='output.png', title=None):
+    
+    fig = plt.figure(figsize=[12,5])
+
+    ## graph
+    ax = plt.subplot(121)
+    draw_graph(G, pos, ax=ax, xlabel=None, ylabel=None)
     ax.tick_params(left=True, bottom=True, labelleft=True, labelbottom=True)
 
     if grad is not None:
