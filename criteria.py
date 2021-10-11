@@ -10,38 +10,39 @@ import networkx as nx
 
 import random
 
-
-
-def crossings(pos, G, k2i, sampleSize, sampleOn='edges', reg_coef=1, niter=30):
-    crossing_segs_sample = utils.sample_crossings(pos, G, k2i, sampleSize, sampleOn)
-#     if len(crossing_segs_sample) < sampleSize*0.5:
-    if sampleOn=='edges' and len(crossing_segs_sample) == 0:
-        crossing_segs_sample = utils.sample_crossings(pos, G, k2i, sampleSize, sampleOn='crossings')
-        
-    if len(crossing_segs_sample) > 0:
-        pos_segs = pos[crossing_segs_sample.flatten()].view(-1,4,2)
-        w = (torch.rand(pos_segs.shape[0], 2, 1)-0.5).requires_grad_(True)
-        b = (torch.rand(pos_segs.shape[0], 1, 1)-0.5).requires_grad_(True)
-        relu = nn.ReLU()
-        o = optim.SGD([w,b], lr=0.01, momentum=0.5, nesterov=True)
-        for _ in range(niter):
-            pred = pos_segs.detach() @ w + b
-            ## assume labels of nodes in the first edges are -1
-            ## now flip the pred of those nodes so that now we want every pred to be +1
-            pred[:,:2,:] = -pred[:,:2,:]
-            
-            loss_svm = relu(1-pred).sum() + reg_coef * w.pow(2).sum()
-            o.zero_grad()
-            loss_svm.backward()
-            o.step()
-        pred = pos_segs @ w.detach() + b.detach()
     
-        pred[:,:2,:] = -pred[:,:2,:] 
-        loss_crossing = relu(1-pred).sum()
-        return loss_crossing
-    else:
-        ##return dummy loss
-        return (pos[0,0]*0).sum()
+    
+    
+# def crossings(pos, G, k2i, sampleSize, sampleOn='edges', reg_coef=1, niter=30):
+#     crossing_segs_sample = utils.sample_crossings(pos, G, k2i, sampleSize, sampleOn)
+# #     if len(crossing_segs_sample) < sampleSize*0.5:
+#     if sampleOn=='edges' and len(crossing_segs_sample) == 0:
+#         crossing_segs_sample = utils.sample_crossings(pos, G, k2i, sampleSize, sampleOn='crossings')
+        
+#     if len(crossing_segs_sample) > 0:
+#         pos_segs = pos[crossing_segs_sample.flatten()].view(-1,4,2)
+#         w = (torch.rand(pos_segs.shape[0], 2, 1)-0.5).requires_grad_(True)
+#         b = (torch.rand(pos_segs.shape[0], 1, 1)-0.5).requires_grad_(True)
+#         relu = nn.ReLU()
+#         o = optim.SGD([w,b], lr=0.01, momentum=0.5, nesterov=True)
+#         for _ in range(niter):
+#             pred = pos_segs.detach() @ w + b
+#             ## assume labels of nodes in the first edges are -1
+#             ## now flip the pred of those nodes so that now we want every pred to be +1
+#             pred[:,:2,:] = -pred[:,:2,:]
+            
+#             loss_svm = relu(1-pred).sum() + reg_coef * w.pow(2).sum()
+#             o.zero_grad()
+#             loss_svm.backward()
+#             o.step()
+#         pred = pos_segs @ w.detach() + b.detach()
+    
+#         pred[:,:2,:] = -pred[:,:2,:] 
+#         loss_crossing = relu(1-pred).sum()
+#         return loss_crossing
+#     else:
+#         ##return dummy loss
+#         return (pos[0,0]*0).sum()
     
     
 

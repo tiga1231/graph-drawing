@@ -1,11 +1,13 @@
 from utils import utils
 from utils import vis as V
+from utils.CrossingDetector import CrossingDetector
+
 
 import criteria as C
 import quality as Q
 
 import time
-
+import itertools
 
 import numpy as np
 import torch
@@ -49,17 +51,30 @@ class GD2:
             np.repeat(self.node_indices, len(self.G)),
             np.tile(self.node_indices, len(self.G))
         ]
-        self.node_index_pairs = self.node_index_pairs[self.node_index_pairs[:,0]!=self.node_index_pairs[:,1]]
-        self.stress_sample_start = 0
-        np.random.shuffle(self.node_index_pairs)
+        self.node_index_pairs = self.node_index_pairs[self.node_index_pairs[:,0]<self.node_index_pairs[:,1]]
+#         self.stress_sample_start = 0
+#         np.random.shuffle(self.node_index_pairs)
         
-        ## init
+#         init
         self.pos = torch.randn(len(self.G.nodes), 2, device=device).requires_grad_(True)
+#         self.pos = torch.rand(len(self.G.nodes), 2, device=device).requires_grad_(True)
         self.qualities_by_time = []
         self.i = 0
         self.runtime = 0
         self.loss_curve = []
         self.sample_sizes = {}
+        
+        self.crossing_detector = CrossingDetector()
+        self.crossing_detector_loss_fn = nn.BCELoss()
+        self.crossing_pos_loss_fn = nn.BCELoss(reduction='sum')
+        self.crossing_detector_optimizer = optim.SGD(self.crossing_detector.parameters(), lr=0.1)
+        ## filter out incident edge pairs
+        self.non_incident_edge_pairs = [
+            [self.k2i[e1[0]], self.k2i[e1[1]], self.k2i[e2[0]], self.k2i[e2[1]]] 
+            for e1,e2 in itertools.product(G.edges, G.edges) 
+            if e1<e2 and len(set(e1+e2))==4
+        ]
+        self.device='cpu'
         
         
     def optimize(self,
@@ -75,7 +90,7 @@ class GD2:
         scheduler_kwargs=None,
                  
     ):
-        
+
         self.sample_sizes = sample_sizes
         ## shortcut of object attributes
         G = self.G
@@ -86,6 +101,7 @@ class GD2:
         pos = self.pos
         degrees = self.degrees
         maxDegree = self.maxDegree
+        device = self.device
         
         self.init_sampler(criteria_weights)
             
@@ -139,15 +155,6 @@ class GD2:
                     continue
                 
                 if c == 'stress':
-#                     if self.stress_sample_start >= len(self.node_index_pairs):
-#                         np.random.shuffle(self.node_index_pairs)
-#                         self.stress_sample_start = 0
-
-#                     stress_samples = self.node_index_pairs[
-#                         self.stress_sample_start : 
-#                         self.stress_sample_start+sample_sizes['stress']
-#                     ]
-#                     self.stress_sample_start+=sample_sizes['stress']
                     sample = self.sample(c)
                     loss += weight * C.stress(
                         pos, D, W, 
@@ -168,13 +175,33 @@ class GD2:
 
 
                 elif c == 'crossings':
-                    loss += weight * C.crossings(
-                        pos, G, k2i, reg_coef=0.01, 
-                        niter=20, 
-                        sampleSize=sample_sizes['crossings'], sampleOn='edges'
-                    )
+#                     loss += weight * C.crossings(
+#                         pos, G, k2i, reg_coef=0.01, 
+#                         niter=20, 
+#                         sampleSize=sample_sizes['crossings'], sampleOn='edges'
+#                     )
 
-
+                    ## neural crossing detector
+                    sample = self.sample(c)
+                    sample = torch.stack(sample, 1)
+                    
+                    edge_pair_pos = self.pos[sample].view(-1,8)
+                    labels = utils.are_edge_pairs_crossed(edge_pair_pos)
+                    
+                    ## train crossing detector
+                    self.crossing_detector.train()
+                    preds = self.crossing_detector(edge_pair_pos.detach().to(device)).view(-1)
+                    loss_nn = self.crossing_detector_loss_fn(preds, (labels.float()*0.8).to(device))
+                    self.crossing_detector_optimizer.zero_grad()
+                    loss_nn.backward()
+                    self.crossing_detector_optimizer.step()
+                    
+                    ## loss of crossing
+                    self.crossing_detector.eval()
+                    preds = self.crossing_detector(edge_pair_pos.to(device)).view(-1)
+                    loss += weight * self.crossing_pos_loss_fn(preds, (labels.float()*0.01).to(device))
+                    
+        
                 elif c == 'crossing_angle_maximization':
                     loss += weight * C.crossing_angle_maximization(
                         pos, G, k2i, i2k, 
@@ -315,7 +342,10 @@ class GD2:
             elif c == 'neighborhood_preservation':
                 pass
             elif c == 'crossings':
-                pass
+                self.dataloaders[c] = DataLoader(
+                    self.non_incident_edge_pairs, 
+                    batch_size=self.sample_sizes[c], 
+                    shuffle=True)
             elif c == 'crossing_angle_maximization':
                 pass
             elif c == 'aspect_ratio':

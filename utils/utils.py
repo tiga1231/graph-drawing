@@ -7,6 +7,33 @@ import networkx as nx
 from scipy.sparse import csgraph
 from scipy.sparse import csr_matrix
 
+def are_edge_pairs_crossed(p):
+    '''
+    p - positions of n pairs edges in a [n,8] pytorch tensor, 
+        where the postions of 8 nodes come in [ax, ay, bx, by, 
+        cx, cy, dy, dy] for the edge pair a-b and c-d.
+    
+    return - an 1D tensor of boolean values, 
+             where True means two edges cross each other. 
+    '''
+    p1, p2, p3, p4 = p[:,:2], p[:,2:4], p[:,4:6], p[:,6:]
+    a = p2 - p1
+    b = p3 - p4
+    c = p1 - p3
+    ax, ay = a[:,0], a[:,1]
+    bx, by = b[:,0], b[:,1]
+    cx, cy = c[:,0], c[:,1]
+    
+    denom = ay*bx - ax*by
+    numer_alpha = by*cx-bx*cy
+    numer_beta = ax*cy-ay*cx
+    alpha = numer_alpha / denom
+    beta = numer_beta / denom
+    return torch.logical_and(
+        torch.logical_and(0<alpha, alpha<1),
+        torch.logical_and(0<beta, beta<1),
+    )
+
 def shortest_path(G):
     k2i = {k:i for i,k in enumerate(G.nodes)}
     edge_indices = np.array([(k2i[n0], k2i[n1]) for (n0,n1) in G.edges])
