@@ -87,9 +87,9 @@ def angular_resolution(pos, G, k2i, sampleSize=2, sample=None):
     angles = torch.acos(cos.clamp_(-0.99,0.99))
     
     if cos.shape[0] > 0:
-        loss = ((cos+1)**2 / 4).sum()
+#         loss = ((cos+1)**2 / 4).sum()
 #         loss = torch.exp(-angles).sum()
-#         loss = relu(-angles + 2*np.pi/degrees).pow(2).sum()
+        loss = relu(-angles + 2*np.pi/degrees).pow(2).mean()
     else:
         loss = pos[0,0]*0##dummy output
     return loss
@@ -115,7 +115,7 @@ def gabriel(pos, G, k2i, sampleSize):
     relu = nn.ReLU()
 #     print((node_pos-centers).norm(dim=1))
     loss = relu(radii - (node_pos-centers).norm(dim=1)).pow(2)
-    loss = loss.sum()
+    loss = loss.mean()
     return loss
 
 
@@ -306,24 +306,35 @@ def neighborhood_preseration(pos, G, adj, k2i, i2k,
 
 
 
-def edge_uniformity(pos, G, k2i, sampleSize=None, sample=None):
+def edge_uniformity(pos, G, k2i, targetLengths=None, sampleSize=None, sample=None, reduce='mean'):
+    if targetLengths is None:
+        targetLengths = {e:1 for e in G.edges}
+        
     n,m = pos.shape[0], pos.shape[1]
     if sampleSize is not None:
         edges = random.sample(G.edges, sampleSize)
+        edges_set = set(edges)
     else:
         edges = G.edges
         
     sourceIndices, targetIndices = zip(*[ [k2i[e0], k2i[e1]] for e0,e1 in edges])
     source = pos[sourceIndices,:]
     target = pos[targetIndices,:]
-    edgeLengths = (source-target).norm(dim=1) 
-    eu = edgeLengths.var()
-    return eu
+    edgeLengths = (source-target).norm(dim=1)
+    
+    targetLengths = torch.tensor([targetLengths[e] for e in edges])
+#     eu = edgeLengths.var()
+    eu = ((edgeLengths-targetLengths)/targetLengths).pow(2)
+    
+    if reduce == 'sum':
+        return eu.sum()
+    elif reduce == 'mean':
+        return eu.mean()
 
 
 
 
-def stress(pos, D, W, sampleSize=None, sample=None, reduce='sum'):
+def stress(pos, D, W, sampleSize=None, sample=None, reduce='mean'):
     if sample is None:
         n,m = pos.shape[0], pos.shape[1]
         if sampleSize is not None:

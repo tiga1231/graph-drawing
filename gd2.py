@@ -77,6 +77,16 @@ class GD2:
         self.device='cpu'
         
         
+    def grad_clamp(self, l, c, weight, optimizer, ref=1):
+        optimizer.zero_grad()
+        l.backward(retain_graph=True)
+        grad = self.pos.grad.clone()
+        grad_norm = grad.norm(dim=1)
+        is_large = grad_norm > weight*ref
+        grad[is_large] = grad[is_large] / grad_norm[is_large].view(-1,1) * weight*ref
+        self.grads[c] = grad
+                    
+        
     def optimize(self,
         criteria_weights={'stress':1.0}, 
         sample_sizes={'stress':128},
@@ -110,13 +120,16 @@ class GD2:
 
         ## prepare training
         optimizer_kwargs_default = dict(
-            lr=1, momentum=0.7, nesterov=True
+            lr=1, 
+            momentum=0.7, 
+            nesterov=True
         )
         if optimizer_kwargs is not None:
             for k,v in optimizer_kwargs.items():
                 optimizer_kwargs_default[k] = v
         optimizer_kwargs = optimizer_kwargs_default
         optimizer = optim.SGD([pos], **optimizer_kwargs)
+#         optimizer = optim.RMSprop([pos], **optimizer_kwargs)
         
 #         patience = np.ceil(np.log2(len(G)+1))*100
 #         if 'stress' in criteria_weights and sample_sizes['stress'] < 16:
@@ -147,32 +160,43 @@ class GD2:
         for _ in iterBar:
             t0 = time.time()
             ## optimization
-            optimizer.zero_grad()
-
             loss = 0
+            self.grads = {}
+            ref = 1
             for c, weight in criteria_weights.items():
                 if weight == 0:
                     continue
                 
                 if c == 'stress':
                     sample = self.sample(c)
-                    loss += weight * C.stress(
+                    l = weight * C.stress(
                         pos, D, W, 
-                        sample=sample, reduce='mean',)
+                        sample=sample, reduce='mean')
+                    loss += l
+                    self.grad_clamp(l, c, weight, optimizer, ref)
 
+                    
+                    
                 elif c == 'edge_uniformity':
-                    loss += weight * C.edge_uniformity(
-                        pos, G, k2i, sample_sizes['edge_uniformity'])
+                    l = weight * C.edge_uniformity(
+                        pos, G, k2i, targetLengths=None, 
+                        sampleSize=sample_sizes[c],
+                        reduce='mean',
+                    )
+                    loss += l
+                    self.grad_clamp(l, c, weight, optimizer, ref)
 
+                    
 
                 elif c == 'neighborhood_preservation':
-                    loss += weight * C.neighborhood_preseration(
+                    l = weight * C.neighborhood_preseration(
                         pos, G, adj, 
                         k2i, i2k, 
                         degrees, maxDegree,
-                        n_roots=sample_sizes['neighborhood_preservation'], 
+                        n_roots=sample_sizes[c], 
                         depth_limit=1)
-
+                    loss += l
+                    self.grad_clamp(l, c, weight, optimizer, ref)
 
                 elif c == 'crossings':
 #                     loss += weight * C.crossings(
@@ -181,10 +205,10 @@ class GD2:
 #                         sampleSize=sample_sizes['crossings'], sampleOn='edges'
 #                     )
 
+
                     ## neural crossing detector
                     sample = self.sample(c)
                     sample = torch.stack(sample, 1)
-                    
                     edge_pair_pos = self.pos[sample].view(-1,8)
                     labels = utils.are_edge_pairs_crossed(edge_pair_pos)
                     
@@ -199,30 +223,38 @@ class GD2:
                     ## loss of crossing
                     self.crossing_detector.eval()
                     preds = self.crossing_detector(edge_pair_pos.to(device)).view(-1)
-                    loss += weight * self.crossing_pos_loss_fn(preds, (labels.float()*0.01).to(device))
                     
-        
+                    l = weight * self.crossing_pos_loss_fn(preds, (labels.float()*0.01).to(device))
+                    loss += l
+                    self.grad_clamp(l, c, weight, optimizer, ref)
+                    
                 elif c == 'crossing_angle_maximization':
-                    loss += weight * C.crossing_angle_maximization(
+                    l = weight * C.crossing_angle_maximization(
                         pos, G, k2i, i2k, 
-                        sampleSize=sample_sizes['crossing_angle_maximization'], 
+                        sampleSize=sample_sizes[c], 
 #                         sampleOn='crossings') ## SLOW for large sample size
                         sampleOn='edges')
-
+                    loss += l
+                    self.grad_clamp(l, c, weight, optimizer, ref)
 
                 elif c == 'aspect_ratio':
-                    loss += weight * C.aspect_ratio(
+                    l = weight * C.aspect_ratio(
                         pos, 
-                        sampleSize=sample_sizes['crossing_angle_maximization'])
+                        sampleSize=sample_sizes[c])
+                    loss += l
+                    self.grad_clamp(l, c, weight, optimizer, ref)
 
 
                 elif c == 'angular_resolution':
                     sample = [self.i2k[i.item()] for i in self.sample(c)]
-                    loss += weight * C.angular_resolution(
+                    l = weight * C.angular_resolution(
                         pos, G, k2i, 
-                        sampleSize=sample_sizes['angular_resolution'],
+                        sampleSize=sample_sizes[c],
                         sample=sample,
                     )
+                    
+                    loss += l
+                    self.grad_clamp(l, c, weight, optimizer, ref)
 
 
                 elif c == 'vertex_resolution':
@@ -234,22 +266,32 @@ class GD2:
                         prev_target_dist=vr_target_dist,
                         prev_weight=vr_target_weight
                     )
-                    loss += weight * l
+                    l = weight * l
+                    loss += l
+                    self.grad_clamp(l, c, weight, optimizer, ref)
 
 
                 elif c == 'gabriel':
-#                     loss += weight * C.gabriel(pos, G, k2i, sampleSize=int(sampleSize**0.5))
-                    loss += weight * C.gabriel(
-                      pos, G, k2i, sampleSize=sample_sizes['gabriel'])
+                    l = weight * C.gabriel(
+                        pos, G, k2i, sampleSize=sample_sizes[c])
+                    loss += l
+                    self.grad_clamp(l, c, weight, optimizer, ref)
 
 
                 else:
                     print(f'Criteria not supported: {c}')
-
+            if len(self.grads) > 0:
+                pos.grad = sum(g for c,g in self.grads.items())
+                pos.grad.clamp_(-grad_clamp, grad_clamp)
+                optimizer.step()
+            
+            optimizer.zero_grad()
             loss.backward()
             pos.grad.clamp_(-grad_clamp, grad_clamp)
-            optimizer.step()
-
+#             optimizer.step()
+            ref = pos.grad.norm(dim=1).max()
+            
+#             print(ref.item())
             
             self.runtime += time.time() - t0
 
@@ -269,9 +311,9 @@ class GD2:
 
 
 
-            if loss.isnan():
-                raise Exception('loss is nan')
-                break
+#             if loss.isnan():
+#                 raise Exception('loss is nan')
+#                 break
             if pos.isnan().any():
                 raise Exception('pos is nan')
                 break
@@ -284,23 +326,16 @@ class GD2:
             self.loss_curve.append(weighted_sum_of_loss/sum_of_weight)
                 
 
+                
             if scheduler is not None:
                 scheduler.step(self.loss_curve[-1])
 
 
             lr = optimizer.param_groups[0]['lr']
-
-            # maxGrad = pos.grad.norm(dim=1).max()
-    #         maxGrad = pos.grad.abs().max()
-    #         minStepSize = 1e-6
-    #         if lr * maxGrad <= minStepSize:
-    #             stopCountdown -= 1
-    #             if stopCountdown <= 0:
-    #                 break
-
             if lr <= scheduler.min_lrs[0]:
                 break
 
+                
             if (evaluate_interval is not None
                 and evaluate_interval>0 
                 and self.i%evaluate_interval == evaluate_interval-1

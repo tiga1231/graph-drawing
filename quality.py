@@ -18,8 +18,8 @@ def stress(pos, D, W, sampleSize=None):
     return C.stress(pos, D, W, sampleSize, reduce='mean').item()
 
 
-def edge_uniformity(pos, G, k2i, sampleSize=None):
-    return C.edge_uniformity(pos, G, k2i, sampleSize).item()
+def edge_uniformity(pos, G, k2i, targetLengths=None, sampleSize=None):
+    return C.edge_uniformity(pos, G, k2i, targetLengths, sampleSize).item()
 
 
 def crossings(pos, edge_indices):
