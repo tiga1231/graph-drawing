@@ -14,7 +14,11 @@ import torch
 from torch import nn, optim
 from torch.utils.data import DataLoader
 
+import pickle as pkl
 
+
+        
+        
 def is_interactive():
     import __main__ as main
     return not hasattr(main, '__file__')
@@ -134,8 +138,8 @@ class GD2:
 #         patience = np.ceil(np.log2(len(G)+1))*100
 #         if 'stress' in criteria_weights and sample_sizes['stress'] < 16:
 #             patience += 100 * 16/sample_sizes['stress']
-        patience = np.ceil(np.log2(len(G)+1))*300
-    
+        patience = np.ceil(np.log2(len(G)+1)) * 300 * (16/min(sample_sizes.values()))
+        print(patience)
         scheduler_kwargs_default = dict(
             factor=0.9, 
             patience=patience, 
@@ -280,18 +284,18 @@ class GD2:
 
                 else:
                     print(f'Criteria not supported: {c}')
-            if len(self.grads) > 0:
-                pos.grad = sum(g for c,g in self.grads.items())
-                pos.grad.clamp_(-grad_clamp, grad_clamp)
-                optimizer.step()
-            
+#             if len(self.grads) > 0:
+#                 pos.grad = sum(g for c,g in self.grads.items())
+#                 pos.grad.clamp_(-grad_clamp, grad_clamp)
+#                 optimizer.step()
+#                 ref = pos.grad.norm(dim=1).max()
+
             optimizer.zero_grad()
             loss.backward()
             pos.grad.clamp_(-grad_clamp, grad_clamp)
-#             optimizer.step()
-            ref = pos.grad.norm(dim=1).max()
+            optimizer.step()
             
-#             print(ref.item())
+            
             
             self.runtime += time.time() - t0
 
@@ -478,3 +482,17 @@ class GD2:
             if verbose:
                 print(f'done in {time.time()-t0:.2f}s')
         return qualityMeasures
+    
+    def save(self, fn='result.pkl'):
+        with open(fn, 'wb') as f:
+            pkl.dump(dict(
+                G=self.G,
+                pos=self.pos,
+                i2k=self.i2k,
+                k2i=self.k2i,
+                iter=self.i,
+                runtime=self.runtime,
+                loss_curve=self.loss_curve,
+                qualities_by_time = self.qualities_by_time,
+            ), f)
+        
