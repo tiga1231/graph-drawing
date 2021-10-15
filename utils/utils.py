@@ -7,6 +7,11 @@ import networkx as nx
 from scipy.sparse import csgraph
 from scipy.sparse import csr_matrix
 
+
+def criterion_to_title(criterion):
+    return ' '.join([x.capitalize() for x in criterion.split('_')])
+
+
 def are_edge_pairs_crossed(p):
     '''
     p - positions of n pairs edges in a [n,8] pytorch tensor, 

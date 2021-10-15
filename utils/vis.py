@@ -9,6 +9,9 @@ from mpl_toolkits.mplot3d.art3d import Line3DCollection
 import networkx as nx
 
 
+# def criterion_to_title(criterion):
+#     return ' '.join([x.capitalize() for x in criterion.split('_')])
+
 
 def colorScale2cmap(domain, range1):
     domain = np.array(domain)

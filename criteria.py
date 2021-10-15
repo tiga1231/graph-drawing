@@ -147,44 +147,49 @@ def crossing_angle_maximization(pos, G, k2i, i2k, sampleSize, sampleOn='edges'):
         return (pos[0,0]*0).sum()##dummy loss
     
     
-def aspect_ratio(pos, sampleSize, 
+def aspect_ratio(pos, sampleSize=None, sample=None,
                  rotation_angles=torch.arange(7,dtype=torch.float)/7*(np.pi/2), 
-                 target_width_to_height=[1,1]):
-    if sampleSize is None or sampleSize=='full':
-        samples = pos
+                 target=[1,1]):
+    if sample is not None:
+        sample = pos[sample,:]
+    elif sampleSize is None or sampleSize=='full':
+        sample = pos
     else:
         n = pos.shape[0]
         i = np.random.choice(n, min(n,sampleSize), replace=False)
-        samples = pos[i,:]
+        sample = pos[i,:]
+    bce = nn.BCELoss(reduction='mean')
+    singular_values = torch.svd(sample).S 
+    return bce(singular_values/singular_values.sum(), torch.tensor(target)/sum(target))
 
         
-    mean = samples.mean(dim=0, keepdim=True)
-    samples -= mean
-    scale = samples.max().detach()
-    samples = samples/scale * 1
+#     mean = sample.mean(dim=0, keepdim=True)
+#     sample -= mean
+#     scale = sample.max().detach()
+#     sample = sample/scale * 1
     
-    cos = torch.cos(rotation_angles)
-    sin = torch.sin(rotation_angles)
-    rot = torch.stack([cos, sin, -sin, cos], 1).view(len(rotation_angles), 2, 2)
+#     cos = torch.cos(rotation_angles)
+#     sin = torch.sin(rotation_angles)
+#     rot = torch.stack([cos, sin, -sin, cos], 1).view(len(rotation_angles), 2, 2)
     
-    samples = samples.matmul(rot)
+#     sample = sample.matmul(rot)
 
-    softmax = nn.Softmax(dim=1)
-#     print(softmax(samples))
-    max_hat = (softmax(samples) * samples).sum(1)
-    min_hat = (softmax(-samples) * samples).sum(1)
+#     softmax = nn.Softmax(dim=1)
+# #     print(softmax(sample))
+#     max_hat = (softmax(sample) * sample).sum(1)
+#     min_hat = (softmax(-sample) * sample).sum(1)
     
-    w = max_hat[:,0] - min_hat[:,0]
-    h = max_hat[:,1] - min_hat[:,1]
-    estimate = torch.stack([w,h], 1)
-    estimate /= estimate.sum(1, keepdim=True)
-#     print(estimate)
-    target = torch.tensor(target_width_to_height, dtype=torch.float)
-    target /= target.sum()
-    target = target.repeat(len(rotation_angles), 1)
-    bce = nn.BCELoss(reduction='mean')
-    mse = nn.MSELoss(reduction='mean')
-    return mse(estimate, target)
+#     w = max_hat[:,0] - min_hat[:,0]
+#     h = max_hat[:,1] - min_hat[:,1]
+#     estimate = torch.stack([w,h], 1)
+#     estimate /= estimate.sum(1, keepdim=True)
+# #     print(estimate)
+#     target = torch.tensor(target_width_to_height, dtype=torch.float)
+#     target /= target.sum()
+#     target = target.repeat(len(rotation_angles), 1)
+#     bce = nn.BCELoss(reduction='mean')
+#     mse = nn.MSELoss(reduction='mean')
+#     return mse(estimate, target)
 
 
 
@@ -306,24 +311,24 @@ def neighborhood_preseration(pos, G, adj, k2i, i2k,
 
 
 
-def edge_uniformity(pos, G, k2i, targetLengths=None, sampleSize=None, sample=None, reduce='mean'):
+def ideal_edge_length(pos, G, k2i, targetLengths=None, sampleSize=None, sample=None, reduce='mean'):
     if targetLengths is None:
         targetLengths = {e:1 for e in G.edges}
         
     n,m = pos.shape[0], pos.shape[1]
-    if sampleSize is not None:
+    if sample is not None:
+        edges = sample
+    elif sampleSize is not None:
         edges = random.sample(G.edges, sampleSize)
-        edges_set = set(edges)
     else:
         edges = G.edges
-        
+
     sourceIndices, targetIndices = zip(*[ [k2i[e0], k2i[e1]] for e0,e1 in edges])
     source = pos[sourceIndices,:]
     target = pos[targetIndices,:]
     edgeLengths = (source-target).norm(dim=1)
-    
     targetLengths = torch.tensor([targetLengths[e] for e in edges])
-#     eu = edgeLengths.var()
+
     eu = ((edgeLengths-targetLengths)/targetLengths).pow(2)
     
     if reduce == 'sum':
