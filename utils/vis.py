@@ -39,8 +39,8 @@ def draw_graph_3d(ax, x, G, grad=None, alpha=0.1):
     return ax
 
 
-def draw_graph(G, pos, ax, xlabel=None, ylabel=None, node_size=0):
-    nx.draw_networkx_edges(G, pos=pos, ax=ax)
+def draw_graph(G, pos, ax, xlabel=None, ylabel=None, node_size=0, edge_width=1):
+    nx.draw_networkx_edges(G, pos=pos, ax=ax, width=edge_width)
     if node_size>0:
         nx.draw_networkx_nodes(G, 
             pos=pos, 
@@ -54,13 +54,19 @@ def draw_graph(G, pos, ax, xlabel=None, ylabel=None, node_size=0):
         plt.ylabel(ylabel)
     
     
-def plot(G, pos, lossHistory, i, totalTime, grad=None, node_size=1, edge=True, show=False, save=True, saveName='output.png', title=None):
+def plot(G, pos, lossHistory, i, totalTime, grad=None, 
+         node_size=1, 
+         edge_width=1,
+         show=False, 
+         save=True, saveName='output.png', 
+         title=None):
     
     fig = plt.figure(figsize=[12,5])
 
     ## graph
     ax = plt.subplot(121)
-    draw_graph(G, pos, ax=ax, xlabel=None, ylabel=None)
+    if edge_width > 0:
+        draw_graph(G, pos, ax=ax, xlabel=None, ylabel=None, node_size=node_size, edge_width=edge_width)
     ax.tick_params(left=True, bottom=True, labelleft=True, labelbottom=True)
 
     if grad is not None:
@@ -83,7 +89,9 @@ def plot(G, pos, lossHistory, i, totalTime, grad=None, node_size=1, edge=True, s
     plt.plot(lossHistory)
     plt.xlabel('Iteration')
     plt.ylabel('Loss')
-    plt.title(f'Loss: {lossHistory[-1]:.2f}')
+    
+    if lossHistory:
+        plt.title(f'Loss: {lossHistory[-1]:.4f}')
     
     ## Lr
 #     plt.subplot(224)

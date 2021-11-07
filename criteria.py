@@ -66,65 +66,76 @@ import random
 #     return loss
 
 def angular_resolution(pos, G, k2i, sampleSize=2, sample=None):
-    if sample is None:
-        sample = utils.sample_nodes(G, sampleSize)
-    sample = [s for s in sample if len(list(G.neighbors(s)))>=2]
     relu = nn.ReLU()
     
-    if len(sample)==0:
-        loss = pos[0,0]*0##dummy output
-        return loss
-    degrees = torch.tensor([G.degree(s) for s in sample])
-    neighbors = [random.choices(list(G.neighbors(s)),k=2) for s in sample]
-    sampleIndices = [k2i[s] for s in sample]
-    neighborIndices = [[k2i[n] for n in nei] for nei in neighbors]
-    sample = pos[sampleIndices]
-    neighbors = torch.stack([pos[nei] for nei in neighborIndices])
-    rays = neighbors - sample.unsqueeze(1)
-
-    cosSim = nn.CosineSimilarity()
-    cos = cosSim(rays[:,0,:], rays[:,1,:])
-    angles = torch.acos(cos.clamp_(-0.99,0.99))
     
-    if cos.shape[0] > 0:
+    if sample is None:
+        sample = utils.sample_nodes(G, sampleSize)
+        sample = [s for s in sample if len(list(G.neighbors(s)))>=2]
+
+        if len(sample)==0:
+            loss = pos[0,0]*0##dummy output
+            return loss
+        degrees = torch.tensor([G.degree(s) for s in sample])
+        neighbors = [random.choices(list(G.neighbors(s)),k=2) for s in sample]
+        sampleIndices = [k2i[s] for s in sample]
+        neighborIndices = [[k2i[n] for n in nei] for nei in neighbors]
+        sample = pos[sampleIndices]
+        neighbors = torch.stack([pos[nei] for nei in neighborIndices])
+        rays = neighbors - sample.unsqueeze(1)
+        sim = cos_sim(rays[:,0,:], rays[:,1,:])
+        
+    else:
+        degrees, a,b,c,d = sample
+        a,b,c,d = pos[a], pos[b], pos[c], pos[d]
+        sim = cos_sim(b-a, d-c)
+        
+    angles = torch.acos(sim.clamp_(-0.99,0.99))
+    if sim.shape[0] > 0:
 #         loss = ((cos+1)**2 / 4).sum()
 #         loss = torch.exp(-angles).sum()
-        loss = relu(-angles + 2*np.pi/degrees).pow(2).mean()
+#         loss = relu(-angles + 2*np.pi/degrees).pow(2).mean()
+
+        optimal = 2*np.pi/degrees
+        loss = bce(relu((-angles + optimal)/optimal), torch.zeros_like(angles))
     else:
         loss = pos[0,0]*0##dummy output
     return loss
 
 
 
-def gabriel(pos, G, k2i, sampleSize):
-    edges = utils.sample_edges(G, sampleSize)
-    nodes = utils.sample_nodes(G, sampleSize)
-    m,n = len(nodes), len(edges)
+def gabriel(pos, G, k2i, sample=None, sampleSize=64):
     
-    edges = np.array([(k2i[e0], k2i[e1]) for e0,e1 in edges])
-    nodes = np.array([k2i[n] for n in nodes])
+    if sample is not None:
+        nodes, edges = sample
+        edges = torch.stack(edges, dim=-1)
+    else:
+        edges = utils.sample_edges(G, sampleSize)
+        nodes = utils.sample_nodes(G, sampleSize)
+    
+        edges = np.array([(k2i[e0], k2i[e1]) for e0,e1 in edges])
+        nodes = np.array([k2i[n] for n in nodes])
+    m,n = len(nodes), len(edges)
     node_pos = pos[nodes]
     edge_pos = pos[edges.flatten()].reshape([-1,2,2])
     centers = edge_pos.mean(1)
     radii = (edge_pos[:,0,:] - edge_pos[:,1,:]).norm(dim=1, keepdim=True)/2
     
-    centers = centers.repeat(1,m).view(-1, 2)
-    radii = radii.repeat(1,m).view(-1, 1)
-    node_pos = node_pos.repeat(n,1)
+#     centers = centers.repeat(1,m).view(-1, 2)
+#     radii = radii.repeat(1,m).view(-1, 1)
+#     node_pos = node_pos.repeat(n,1)
     
     relu = nn.ReLU()
 #     print((node_pos-centers).norm(dim=1))
+#     loss = relu(radii+0.01 - (node_pos-centers).norm(dim=1)).pow(2)
     loss = relu(radii - (node_pos-centers).norm(dim=1)).pow(2)
     loss = loss.mean()
     return loss
 
 
-def crossing_angle_maximization(pos, G, k2i, i2k, sampleSize, sampleOn='edges'):
-    
-    crossing_segs_sample = utils.sample_crossings(pos, G, k2i, sampleSize, sampleOn)
-    if sampleOn=='edges' and len(crossing_segs_sample) == 0:
-        crossing_segs_sample = utils.sample_crossings(pos, G, k2i, sampleSize, sampleOn='crossings')
-        
+bce = torch.nn.BCELoss()
+cos_sim = torch.nn.CosineSimilarity()
+def crossing_angle_maximization(pos, G, k2i, i2k, sample=None, sample_labels=None, sampleSize=16, sampleOn='edges'):
 #     edge_list = list(G.edges)
 #     if sampleOn == 'edges':
 #         sample_indices = np.random.choice(len(edge_list), sampleSize, replace=False)
@@ -137,19 +148,41 @@ def crossing_angle_maximization(pos, G, k2i, i2k, sampleSize, sampleOn='edges'):
 #         sample_indices = np.random.choice(crossing_count, min(sampleSize,crossing_count), replace=False)
 #         crossing_segs_sample = crossing_segs[sample_indices]
 
-    if len(crossing_segs_sample) > 0:
-        pos_segs = pos[crossing_segs_sample.flatten()].view(-1,4,2)
-        v1 = pos_segs[:,1] - pos_segs[:,0]
-        v2 = pos_segs[:,3] - pos_segs[:,2]
-        cosSim = torch.nn.CosineSimilarity()
-        return (cosSim(v1, v2)**2).sum()
-    else:
-        return (pos[0,0]*0).sum()##dummy loss
+#     if len(crossing_segs_sample) > 0:
+#     pos_segs = pos[crossing_segs_sample.flatten()].view(-1,4,2)
+
+
+    if sample is None:
+        crossing_segs_sample = utils.sample_crossings(pos, G, k2i, sampleSize, sampleOn)
+        if sampleOn=='edges' and len(crossing_segs_sample) == 0:
+            crossing_segs_sample = utils.sample_crossings(pos, G, k2i, sampleSize, sampleOn='crossings')
+            sample = crossing_segs_sample
+            
+    pos_segs = pos[sample.flatten()].view(-1,4,2)
+    if sample_labels is None:
+        sample_labels = utils.are_edge_pairs_crossed(pos_segs.view(-1,8))
+
+    pos_segs = pos[sample.flatten()].view(-1,4,2)
+    v1 = pos_segs[:,1] - pos_segs[:,0]
+    v2 = pos_segs[:,3] - pos_segs[:,2]
+    cosSim = cos_sim(v1, v2)
+#     return (cosSim**2).mean()
+    return (cosSim**2).sum()
+#     return bce(
+#         sample_labels * (cosSim**2).clamp_(1e-4, 1-1e-4), 
+#         torch.zeros_like(cosSim)
+#     )
+#     else:
+#         return pos[0,0]*0##dummy loss
     
     
 def aspect_ratio(pos, sampleSize=None, sample=None,
-                 rotation_angles=torch.arange(7,dtype=torch.float)/7*(np.pi/2), 
+#                  rotation_angles=torch.arange(7,dtype=torch.float)/7*(np.pi/2), 
                  target=[1,1]):
+    
+    if target[0] < target[1]:
+        target = target[::-1]
+        
     if sample is not None:
         sample = pos[sample,:]
     elif sampleSize is None or sampleSize=='full':
@@ -158,9 +191,10 @@ def aspect_ratio(pos, sampleSize=None, sample=None,
         n = pos.shape[0]
         i = np.random.choice(n, min(n,sampleSize), replace=False)
         sample = pos[i,:]
-    bce = nn.BCELoss(reduction='mean')
-    singular_values = torch.svd(sample).S 
-    return bce(singular_values/singular_values.sum(), torch.tensor(target)/sum(target))
+    bce = nn.BCELoss(reduction='sum')
+    singular_values = torch.svd(sample-sample.mean(dim=0)).S
+    
+    return bce(singular_values[1]/singular_values[0], torch.tensor(target[1]/target[0]))
 
         
 #     mean = sample.mean(dim=0, keepdim=True)
@@ -231,23 +265,33 @@ def vertex_resolution(pos, sampleSize=None, sample=None, target=0.1, prev_target
 #     loss = len(pdist)*(softmin(pdist).detach() * relu((target_dist - pdist)/target_dist)).sum()
 #     loss = relu((target_dist - pdist)/targetDist).sum()
 #     loss = relu(target_dist - pdist).sum()
-    loss = relu(1 - pdist/target_dist).pow(2).sum()
+    loss = relu(1 - pdist/target_dist).pow(2).mean()
     return loss, target_dist, weight
 
 
 def neighborhood_preseration(pos, G, adj, k2i, i2k, 
                              degrees, max_degree,
-                             n_roots=2, depth_limit=1, 
+                             sample=None,
+                             n_roots=2, 
+                             depth_limit=1, 
                              neg_sample_rate=0.5, 
                              device='cpu'):
     
-    pos_samples = []
-    for _ in range(n_roots):
-        root = i2k[random.randint(0, len(G)-1)]
-        G_sub = nx.bfs_tree(G, root, depth_limit=depth_limit)
-        pos_samples += [k2i[n] for n in G_sub.nodes]
-    pos_samples = sorted(set(pos_samples))
-    
+    if sample is not None:
+        pos_samples = []
+        for root_index in sample:
+            root = i2k[root_index]
+            G_sub = nx.bfs_tree(G, root, depth_limit=depth_limit)
+            pos_samples += [k2i[n] for n in G_sub.nodes]
+        pos_samples = sorted(set(pos_samples))
+    else:
+        pos_samples = []
+        for _ in range(n_roots):
+            root = i2k[random.randint(0, len(G)-1)]
+            G_sub = nx.bfs_tree(G, root, depth_limit=depth_limit)
+            pos_samples += [k2i[n] for n in G_sub.nodes]
+        pos_samples = sorted(set(pos_samples))
+
     n_neg_samples = int(neg_sample_rate * len(pos_samples))
     neg_samples = [random.randint(0, len(G)-1) for _ in range(n_neg_samples)] ##negative samples
     
@@ -269,7 +313,7 @@ def neighborhood_preseration(pos, G, adj, k2i, i2k,
     
     
     ## k_dist
-    ## Option 1, mean of k-th and (k+1)th-NN as threshold
+#     # Option 1, mean of k-th and (k+1)th-NN as threshold
 #     degrees = degrees[samples]
 #     max_degree = degrees.max()
 #     n_neighbors = max(2, min(max_degree+1, n))
@@ -288,20 +332,23 @@ def neighborhood_preseration(pos, G, adj, k2i, i2k,
 #         ( knn_dists[i,min(kmax, k)] + knn_dists[i,min(kmax, k+1)] ) / 2 
 #         for i,k in enumerate(degrees)
 #     ])
+#     pred = torch.from_numpy(k_dist.astype(np.float32)).view(-1,1) - pdist
 
+    
     ## Option 2, fraction of diameter of drawing as threshold
     ## TODO adaptive dist (e.g. normalize by diameter of the drawing, 0.1*diameter)
 #     diameter = pdist.max().item()
 #     k_dist = 0.1 * max(diameter, 1.0)
+#     pred = -pdist + k_dist
 
     ## Option 3, constant threshold
     k_dist = 1.5
-    
-    ## Option 4 (TODO), threshold by k and (k+1)-th graph theoretical distance
-    
-    
-#     pred = torch.from_numpy(k_dist.astype(np.float32)).view(-1,1) - pdist
     pred = -pdist + k_dist
+#     pred = torch.sign(-pdist + k_dist) * (-pdist + k_dist).pow(2)
+    
+    ## Option 4 (TODO), threshold by furthest neighboring node
+    
+    
 
     
     target = adj + torch.eye(adj.shape[0], device=device)

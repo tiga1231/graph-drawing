@@ -6,6 +6,7 @@ import networkx as nx
 
 from scipy.sparse import csgraph
 from scipy.sparse import csr_matrix
+import scipy.io as io
 
 
 def criterion_to_title(criterion):

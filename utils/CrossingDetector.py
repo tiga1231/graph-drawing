@@ -5,7 +5,8 @@ from torch import nn
 class CrossingDetector(nn.Module):
     def __init__(self):
         super().__init__()
-        self.layer_dims = [8,96,256,96,1]
+#         self.layer_dims = [8,256,1024,128,1]
+        self.layer_dims = [8,128,512,64,1]
         self.layers = []
         for i, (in_dim, out_dim) in enumerate(zip(self.layer_dims[:-1], self.layer_dims[1:])):
             self.layers.append(nn.Linear(in_dim, out_dim))

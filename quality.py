@@ -115,7 +115,10 @@ def angular_resolution(pos, G, k2i, sampleSize=None):
     else:
         samples = utils.sample_nodes(G, sampleSize)
     neighbors = [list(G.neighbors(s)) for s in samples]
-    max_degree = len(max(neighbors, key=lambda x:len(x)))
+
+    # max_degree = len(max(neighbors, key=lambda x:len(x)))
+    degrees = [len(nei) for nei in neighbors]
+    
     sampleIndices = [k2i[s] for s in samples]
     neighborIndices = [[k2i[n] for n in nei] for nei in neighbors]
     
@@ -124,10 +127,17 @@ def angular_resolution(pos, G, k2i, sampleSize=None):
     
     rays = [nei-sam for nei,sam in zip(neighbors, samples) if len(nei)>1]
     angles = [utils.get_angles(rs) for rs in rays]
-    min_angle = min(min(a) for a in angles)
-#     min_angle = sum(min(a) for a in angles)/len(angles)
-    ar = min_angle / (np.pi*2/max_degree)
-    return ar.item()
+    
+#     min_angle = min(min(a) for a in angles)
+#     ar = min_angle / (np.pi*2/max_degree)
+#     return ar.item()
+
+
+    ar = min([
+        a.min().item()/(np.pi*2/d) 
+        for a,d in zip(angles, degrees)
+    ])
+    return ar
 
 
 
@@ -142,9 +152,9 @@ def vertex_resolution(pos, sampleSize=None, target=0.1):
     m = samples.shape[0]
     a = samples.repeat([1,m]).view(-1,2)
     b = samples.repeat([m,1])
-    pdist = pairwiseDistance(a, b)
+    pdist = pairwiseDistance(a, b)[1:].view(-1, m+1)[:,:-1].flatten()
     dmax = pdist.max().item()
-    pdist = pdist[pdist>0.01]
+#     pdist = pdist[pdist>1e-6]
     dmin = pdist.min().item()
     
 #     pdist[::m+1] = 1e9
@@ -170,7 +180,7 @@ def gabriel(pos, G, k2i, sampleSize=None):
     centers = edge_pos.mean(1)
     radii = (edge_pos[:,0,:] - edge_pos[:,1,:]).norm(dim=1)/2
     node_center_dists = (node_pos.reshape([-1,1,2])-centers.reshape([1,-1,2])).norm(dim=-1)
-    node_center_dists /= radii
+    node_center_dists /= radii+1e-6
     
     quality = node_center_dists.min().item()
     return quality
