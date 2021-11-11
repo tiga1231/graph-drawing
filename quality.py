@@ -86,7 +86,7 @@ def crossing_angle_maximization(pos, G_edges, k2i):
 
 def aspect_ratio(
     pos, sampleSize=None, 
-    rotation_angles=torch.arange(7,dtype=torch.float)/7*(np.pi/2), 
+    rotation_angles=torch.arange(17,dtype=torch.float)/17*(np.pi/2), 
 ):
     if sampleSize is not None:
         n = pos.shape[0]

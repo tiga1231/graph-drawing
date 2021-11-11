@@ -1,4 +1,7 @@
 import torch
+from torch import nn
+
+
 import numpy as np
 import time
 import utils.poly_point_isect as bo   ##bentley-ottmann sweep line
@@ -8,7 +11,34 @@ from scipy.sparse import csgraph
 from scipy.sparse import csr_matrix
 import scipy.io as io
 
+def best_scale_stress(pos, D, W):
+    n,m = pos.shape[0], pos.shape[1]
+    x0 = pos.repeat(1, n).view(-1,m)
+    x1 = pos.repeat(n, 1)
+    D = D.view(-1)
+    W = W.view(-1)
+    pdist = nn.PairwiseDistance()(x0, x1)
+    s = (W*D*pdist).sum() / (W * pdist**2).sum()
+    return s
 
+
+def best_scale_ideal_edge_length(pos, G, k2i, targetLengths=None):
+    if targetLengths is None:
+        targetLengths = {e:1 for e in G.edges}
+        
+    edges = G.edges
+    sourceIndices, targetIndices = zip(*[ [k2i[e0], k2i[e1]] for e0,e1 in edges])
+    source = pos[sourceIndices,:]
+    target = pos[targetIndices,:]
+    edgeLengths = (source-target).norm(dim=1)
+    targetLengths = torch.tensor([targetLengths[e] for e in edges])
+
+    s = (edgeLengths-targetLengths).sum() / (edgeLengths-targetLengths).pow(2).sum()
+    
+    return s
+    
+    
+    
 def criterion_to_title(criterion):
     return ' '.join([x.capitalize() for x in criterion.split('_')])
 

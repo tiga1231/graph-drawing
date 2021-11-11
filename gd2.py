@@ -203,7 +203,7 @@ class GD2:
         for iter_index in iterBar:
             t0 = time.time()
             ## optimization
-            loss = 0
+            loss = self.pos[0,0]*0 ## dummy loss
             self.grads = {}
             ref = 1
             for c, weight in criteria_weights.items():
@@ -256,9 +256,18 @@ class GD2:
                     sample = torch.stack(sample, 1)
                     edge_pair_pos = self.pos[sample].view(-1,8)
                     labels = utils.are_edge_pairs_crossed(edge_pair_pos)
+                    
+#                     edge_pair_pos = self.pos[sample].view(-1,8)
+#                     labels = utils.are_edge_pairs_crossed(edge_pair_pos)
+#                     if labels.sum() < 1:
+#                         sample = torch.cat([sample, self.sample_crossings(c)], dim=0)
+#                         edge_pair_pos = self.pos[sample].view(-1,8)
+#                         labels = utils.are_edge_pairs_crossed(edge_pair_pos)   
+                        
+                        
                     ## train crossing detector
                     self.crossing_detector.train()
-                    for _ in range(1):
+                    for _ in range(2):
                         preds = self.crossing_detector(edge_pair_pos.detach().to(device)).view(-1)
                         loss_nn = self.crossing_detector_loss_fn(
                             preds, 
@@ -274,7 +283,6 @@ class GD2:
                     ## loss of crossing
                     self.crossing_detector.eval()
                     preds = self.crossing_detector(edge_pair_pos.to(device)).view(-1)
-                    
                     l = weight * self.crossing_pos_loss_fn(preds, (labels.float()*0).to(device))
                     loss += l
 #                     self.grad_clamp(l, c, weight, optimizer, ref)
@@ -282,10 +290,17 @@ class GD2:
                 elif c == 'crossing_angle_maximization':
                     sample = self.sample(c)
                     sample = torch.stack(sample, dim=-1)
-                
+                    pos_segs = pos[sample.flatten()].view(-1,4,2)
+                    sample_labels = utils.are_edge_pairs_crossed(pos_segs.view(-1,8))
+                    if sample_labels.sum() < 1:
+                        sample = self.sample_crossings(c)
+                        pos_segs = pos[sample.flatten()].view(-1,4,2)
+                        sample_labels = utils.are_edge_pairs_crossed(pos_segs.view(-1,8))
+                    
                     l = weight * C.crossing_angle_maximization(
                         pos, G, k2i, i2k,
                         sample = sample,
+                        sample_labels = sample_labels,
 #                         sampleSize=sample_sizes[c], 
 #                         sampleOn='crossings') ## SLOW for large sample size
 #                         sampleOn='edges'
@@ -507,6 +522,23 @@ class GD2:
                     shuffle=True
                 )
     
+    def sample_crossings(self, c='crossing_angle_maximization', mode='use_existing_crossings'):
+        if not hasattr(self, 'crossing_loaders'):
+            self.crossing_loaders = {}    
+        if not hasattr(self, 'crossing_samplers'):
+            self.crossing_samplers = {}
+        
+        if mode == 'new' or c not in self.crossing_loaders:
+            crossing_segs = utils.find_crossings(self.pos, list(self.G.edges), self.k2i)
+            self.crossing_loaders[c] = DataLoader(crossing_segs, batch_size=self.sample_sizes[c])
+            self.crossing_samplers[c] = iter(self.crossing_loaders[c])
+#             print(f'finding new crossings...{crossing_segs.shape}')
+        try:
+            sample = next(self.crossing_samplers[c])
+        except StopIteration:
+            sample = self.sample_crossings(c, mode='new')
+        return sample
+
     
     def sample(self, criterion):
         if criterion not in self.samplers:
@@ -535,7 +567,8 @@ class GD2:
         self,
         pos=None,
         qualities={'stress'},
-        verbose=False
+        verbose=False,
+        mode='original'
     ):
         
         if pos is None:
@@ -562,9 +595,19 @@ class GD2:
                 
             t0 = time.time()
             if q == 'stress':
-                qualityMeasures[q] = Q.stress(pos, self.D, self.W, None)
+                if mode == 'original':
+                    qualityMeasures[q] = Q.stress(pos, self.D, self.W, None)
+                elif mode == 'best_scale':
+                    s = utils.best_scale_stress(pos, self.D, self.W)
+                    qualityMeasures[q] = Q.stress(pos*s, self.D, self.W, None)
+                    
             elif q == 'ideal_edge_length':
-                qualityMeasures[q] = Q.ideal_edge_length(pos, self.G, self.k2i)
+                if mode == 'original':
+                    qualityMeasures[q] = Q.ideal_edge_length(pos, self.G, self.k2i)
+                elif mode == 'best_scale':
+                    s = utils.best_scale_ideal_edge_length(pos, self.G, self.k2i)
+                    qualityMeasures[q] = Q.ideal_edge_length(s*pos, self.G, self.k2i)
+
             elif q == 'neighborhood_preservation':
                 qualityMeasures[q] = 1 - Q.neighborhood_preservation(
                     pos, self.G, self.adj, self.i2k)

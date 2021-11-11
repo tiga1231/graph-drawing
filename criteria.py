@@ -98,6 +98,7 @@ def angular_resolution(pos, G, k2i, sampleSize=2, sample=None):
 
         optimal = 2*np.pi/degrees
         loss = bce(relu((-angles + optimal)/optimal), torch.zeros_like(angles))
+#         loss = torch.exp(-angles/optimal).mean()
     else:
         loss = pos[0,0]*0##dummy output
     return loss
@@ -127,8 +128,8 @@ def gabriel(pos, G, k2i, sample=None, sampleSize=64):
     
     relu = nn.ReLU()
 #     print((node_pos-centers).norm(dim=1))
-#     loss = relu(radii+0.01 - (node_pos-centers).norm(dim=1)).pow(2)
-    loss = relu(radii - (node_pos-centers).norm(dim=1)).pow(2)
+    loss = relu(radii+0.01 - (node_pos-centers).norm(dim=1)).pow(2)
+#     loss = relu(radii - (node_pos-centers).norm(dim=1)).pow(2)
     loss = loss.mean()
     return loss
 
@@ -161,16 +162,22 @@ def crossing_angle_maximization(pos, G, k2i, i2k, sample=None, sample_labels=Non
     pos_segs = pos[sample.flatten()].view(-1,4,2)
     if sample_labels is None:
         sample_labels = utils.are_edge_pairs_crossed(pos_segs.view(-1,8))
-
+    
+    
+            
     pos_segs = pos[sample.flatten()].view(-1,4,2)
     v1 = pos_segs[:,1] - pos_segs[:,0]
     v2 = pos_segs[:,3] - pos_segs[:,2]
-    cosSim = cos_sim(v1, v2)
-#     return (cosSim**2).mean()
-    return (cosSim**2).sum()
+    sim = cos_sim(v1, v2)
+    
+#     angles = torch.acos(sim.clamp_(-0.99,0.99))
+#     return (sample_labels*(angles-np.pi/2)).pow(2).mean()
+    
+#     return (sample_labels * sim**2).mean()
+    return (sample_labels * sim**2 / (1-sim**2+1e-6)).mean()
 #     return bce(
-#         sample_labels * (cosSim**2).clamp_(1e-4, 1-1e-4), 
-#         torch.zeros_like(cosSim)
+#         sample_labels * (sim**2).clamp_(1e-4, 1-1e-4), 
+#         torch.zeros_like(sim)
 #     )
 #     else:
 #         return pos[0,0]*0##dummy loss
