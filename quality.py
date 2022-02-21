@@ -1,4 +1,4 @@
-from pynndescent import NNDescent
+# from pynndescent import NNDescent
 # from utils import lovasz_losses as L
 from utils import utils
 

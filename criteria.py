@@ -1,4 +1,4 @@
-from pynndescent import NNDescent
+# from pynndescent import NNDescent
 from utils import lovasz_losses as L
 from utils import utils
 
@@ -320,26 +320,26 @@ def neighborhood_preseration(pos, G, adj, k2i, i2k,
     
     
     ## k_dist
-#     # Option 1, mean of k-th and (k+1)th-NN as threshold
-#     degrees = degrees[samples]
-#     max_degree = degrees.max()
-#     n_neighbors = max(2, min(max_degree+1, n))
-#     n_trees = min(64, 5 + int(round((n) ** 0.5 / 20.0)))
-#     n_iters = max(5, int(round(np.log2(n))))
-#     knn_search_index = NNDescent(
-#         x.detach().numpy(),
-#         n_neighbors=n_neighbors,
-#         n_trees=n_trees,
-#         n_iters=n_iters,
-#         max_candidates=60,
-#     )
-#     knn_indices, knn_dists = knn_search_index.neighbor_graph
-#     kmax = knn_dists.shape[1]-1
-#     k_dist = np.array([
-#         ( knn_dists[i,min(kmax, k)] + knn_dists[i,min(kmax, k+1)] ) / 2 
-#         for i,k in enumerate(degrees)
-#     ])
-#     pred = torch.from_numpy(k_dist.astype(np.float32)).view(-1,1) - pdist
+    # Option 1, mean of k-th and (k+1)th-NN as threshold
+    # degrees = degrees[samples]
+    # max_degree = degrees.max()
+    # n_neighbors = max(2, min(max_degree+1, n))
+    # n_trees = min(64, 5 + int(round((n) ** 0.5 / 20.0)))
+    # n_iters = max(5, int(round(np.log2(n))))
+    # knn_search_index = NNDescent(
+    #     x.detach().numpy(),
+    #     n_neighbors=n_neighbors,
+    #     n_trees=n_trees,
+    #     n_iters=n_iters,
+    #     max_candidates=60,
+    # )
+    # knn_indices, knn_dists = knn_search_index.neighbor_graph
+    # kmax = knn_dists.shape[1]-1
+    # k_dist = np.array([
+    #     ( knn_dists[i,min(kmax, k)] + knn_dists[i,min(kmax, k+1)] ) / 2 
+    #     for i,k in enumerate(degrees)
+    # ])
+    # pred = torch.from_numpy(k_dist.astype(np.float32)).view(-1,1) - pdist
 
     
     ## Option 2, fraction of diameter of drawing as threshold
@@ -351,7 +351,7 @@ def neighborhood_preseration(pos, G, adj, k2i, i2k,
     ## Option 3, constant threshold
     k_dist = 1.5
     pred = -pdist + k_dist
-#     pred = torch.sign(-pdist + k_dist) * (-pdist + k_dist).pow(2)
+    # pred = torch.sign(-pdist + k_dist) * (-pdist + k_dist).pow(2)
     
     ## Option 4 (TODO), threshold by furthest neighboring node
     

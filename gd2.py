@@ -94,6 +94,7 @@ class GD2:
         self.runtime = 0
         self.last_time_eval = 0 ## last time that evaluates the quality
         self.last_time_vis = 0
+        self.iters = []
         self.loss_curve = []
         self.sample_sizes = {}
         
@@ -424,6 +425,7 @@ class GD2:
             total_weight = total_weight*s+1
             if self.i % 10 == 0:
                 self.loss_curve.append(weighted_sum_of_loss/total_weight)
+                self.iters.append(self.i)
                 if scheduler is not None:
                     scheduler.step(self.loss_curve[-1])
 
