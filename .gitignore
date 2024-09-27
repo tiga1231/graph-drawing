@@ -9,3 +9,4 @@ __pycache__
 
 gd_hypercube/
 figures-tmp/
+.virtual_documents
