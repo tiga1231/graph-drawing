@@ -404,7 +404,7 @@ class GD2:
                     self.i, self.runtime, 
                     node_size=0,
                     edge_width=0.6,
-                    show=True, save=False
+                    # show=True, save=False
                 )
                 self.last_time_vis = self.runtime
 

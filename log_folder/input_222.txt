@@ -1,0 +1,1 @@
+{"graph": "hypercube", "graph_param_1": "7", "output_file": "log_folder/output_222.txt", "metrics": ["aspect_ratio", "gabriel"]}

@@ -1,0 +1,1 @@
+{"graph": "hypercube", "graph_param_1": "5", "output_file": "log_folder/output_95.txt", "metrics": ["crossing_angle_maximization"]}

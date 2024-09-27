@@ -1,0 +1,1 @@
+{"graph": "hypercube", "graph_param_1": "6", "output_file": "log_folder/output_146.txt", "metrics": ["stress", "neighborhood_preservation"]}
